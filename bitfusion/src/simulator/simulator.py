@@ -528,6 +528,8 @@ class Simulator(object):
                 im2col = True # im2col for first layer
             else:
                 im2col = False
+            # im2col = True
+
             return self.get_conv_cycles(K,
                                         O,
                                         S,

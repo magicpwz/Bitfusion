@@ -98,7 +98,9 @@ class SimulatorSweep(object):
                                                 lookup_dict['IBUF Size (bits)'] = ibuf
                                                 lookup_dict['Batch size'] = batch_size
                                                 results = lookup_pandas_dataframe(self.sweep_df, lookup_dict)
+
                                                 nn = benchmarks.get_bench_nn(b, WRPN=True)
+                                                
                                                 if len(results) == 0:
                                                     self.logger.info('Simulating Benchmark: {}'.format(b))
                                                     self.logger.info('N x M = {} x {}'.format(n, m))
@@ -106,7 +108,9 @@ class SimulatorSweep(object):
                                                     self.logger.info('Min Precision (bits): {}'.format(pmin))
                                                     self.logger.info('Batch size: {}'.format(batch_size))
                                                     self.logger.info('Bandwidth (bits/cycle): {}'.format(bw))
+
                                                     stats = benchmarks.get_bench_numbers(nn, sim_obj, batch_size)
+
                                                     for layer in stats:
                                                         cycles = stats[layer].total_cycles
                                                         reads = stats[layer].reads
@@ -144,9 +148,13 @@ def check_pandas_or_run(sim, dataframe, sim_sweep_csv, batch_size=1, config_file
 
     results = lookup_pandas_dataframe(dataframe, ld)
 
+
     if len(results) == 0:
+
         sweep_obj = SimulatorSweep(sim_sweep_csv, config_file)
+
         dataframe = sweep_obj.sweep(sim, list_batch=[batch_size])
+
         dataframe.to_csv(sim_sweep_csv, index=False)
         return lookup_pandas_dataframe(dataframe, ld)
     else:

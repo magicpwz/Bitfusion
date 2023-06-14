@@ -277,8 +277,19 @@ def optimize_for_order(conv_params):
 
         best_cycles = None
         best_energy = None
-        min_cycles = min([x[-4] for x in results])
-        min_energy = min([x[-3] for x in results])
+
+        # 容易报错，因此注释
+        # TODO 后续看需求补上
+        # min_cycles = min([x[-4] for x in results])
+        # min_energy = min([x[-3] for x in results])
+
+        # mid = [x[-4] for x in results]
+        # # print(mid)
+        # min_cycles = min(mid)
+        # mid = [x[-3] for x in results]
+        # min_energy = min(mid)
+        
+        
         cycles_list = [x[-2] for x in results]
         energy_list = [x[-1] for x in results]
         for r in results:

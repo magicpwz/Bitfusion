@@ -114,8 +114,13 @@ def write_to_csv(csv_name, fields, stats, graph, csv_path='./'):
 
 def get_bench_numbers(graph, sim_obj, batch_size=1):
     stats = {}
-    for opname, op in graph.op_registry.iteritems():
+
+    # python2 移出了iteritems()
+    # for opname, op in graph.op_registry.iteritems():
+    for opname, op in graph.op_registry.items():
+        
         out = sim_obj.get_cycles(op, batch_size)
+        # print('1')
         if out is not None:
             s, l = out
             stats[opname] = s
