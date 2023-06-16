@@ -1,6 +1,10 @@
 import argparse
 import logging
 
+
+# DnnWeaver v2.0 is an open-source framework for accelerating Deep Neural Networks (DNNs) on FPGAs.
+# https://github.com/hsharma35/dnnweaver2
+
 from dnnweaver2.graph import Graph, get_default_graph
 from dnnweaver2.tensorOps.cnn import conv2D, maxPool, flatten, matmul, addBias, batch_norm, reorg, concat, leakyReLU, add
 from dnnweaver2 import get_tensor
@@ -72,6 +76,7 @@ benchlist = [\
             ]
 
 def get_bench_nn(bench_name, WRPN=False):
+
     if bench_name == 'AlexNet':
         if WRPN:
             return get_alex_net_wrpn()
@@ -126,6 +131,7 @@ def get_bench_numbers(graph, sim_obj, batch_size=1):
             stats[opname] = s
     return stats
 
+# 网络结构的操作
 def get_alex_net():
     '''
     AlexNet
@@ -136,6 +142,7 @@ def get_alex_net():
 
     with g.as_default():
         with g.name_scope('inputs'):
+            # get_tensor DnnWeaver v2.0自带
             i = get_tensor(shape=(batch_size,227,227,3), name='data', dtype=FQDtype.FXP8, trainable=False)
 
         with g.name_scope('conv1_a'):

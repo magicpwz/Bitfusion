@@ -8,7 +8,11 @@ import bitfusion.src.benchmarks.benchmarks as benchmarks
 
 class SimulatorSweep(object):
     def __init__(self, csv_filename, config_file='conf.ini', verbose=False):
+        
+        # 重新跑了一个Simulator，和之前的仿真不是一个文件
+        # 可有可无，不影响
         self.sim_obj = Simulator(config_file, verbose=False)
+
         self.csv_filename = csv_filename
         if verbose:
             log_level = logging.DEBUG
@@ -65,6 +69,7 @@ class SimulatorSweep(object):
             list_batch = [1]
 
         data_line = []
+
         for batch_size in list_batch:
             for n in list_n:
                 for m in list_m:
@@ -99,6 +104,8 @@ class SimulatorSweep(object):
                                                 lookup_dict['Batch size'] = batch_size
                                                 results = lookup_pandas_dataframe(self.sweep_df, lookup_dict)
 
+                                                # nn是什么？？-->网络结构的数据
+                                                # b: Network
                                                 nn = benchmarks.get_bench_nn(b, WRPN=True)
                                                 
                                                 if len(results) == 0:
@@ -108,7 +115,8 @@ class SimulatorSweep(object):
                                                     self.logger.info('Min Precision (bits): {}'.format(pmin))
                                                     self.logger.info('Batch size: {}'.format(batch_size))
                                                     self.logger.info('Bandwidth (bits/cycle): {}'.format(bw))
-
+                                                    
+                                                    #网络结构在仿真上的一些操作
                                                     stats = benchmarks.get_bench_numbers(nn, sim_obj, batch_size)
 
                                                     for layer in stats:
@@ -148,9 +156,10 @@ def check_pandas_or_run(sim, dataframe, sim_sweep_csv, batch_size=1, config_file
 
     results = lookup_pandas_dataframe(dataframe, ld)
 
+    print(config_file)
 
     if len(results) == 0:
-
+        # 一个标准类
         sweep_obj = SimulatorSweep(sim_sweep_csv, config_file)
 
         dataframe = sweep_obj.sweep(sim, list_batch=[batch_size])
