@@ -137,6 +137,7 @@ class Simulator(object):
         # 输入默认设置 + 工艺
         self.sram_obj = CactiSweep(
                 bin_file=os.path.join(dir_path, 'cacti/cacti'),
+                #csv配置？？
                 csv_file=os.path.join(dir_path, 'cacti_sweep.csv'),
                 default_json=os.path.join(dir_path, 'default.json'),
                 default_dict=sram_opt_dict)
@@ -260,7 +261,7 @@ class Simulator(object):
 
         return core_area, wbuf_area, ibuf_area, obuf_area
 
-
+#重要函数
     def get_energy_cost(self):
 
         if self.energy_costs is not None:
@@ -275,15 +276,26 @@ class Simulator(object):
         wbuf_size = self.accelerator.sram['wgt'] * 8
         ibuf_size = self.accelerator.sram['act'] * 8
         obuf_size = self.accelerator.sram['out'] * 8
+
+        #有图示
         wbuf_bank = N * M
         ibuf_bank = N
         obuf_bank = M
+        
+        
         wbuf_bits = (pmax * pmax / pmin)
         ibuf_bits = (pmax * pmax / pmin)
+
+
+        # wbuf_bits = 32
+        # ibuf_bits = 32
+
         obuf_bits = 32
+
         wbuf_word = ceil_a_by_b(wbuf_size, wbuf_bank * wbuf_bits)
         ibuf_word = ceil_a_by_b(ibuf_size, ibuf_bank * ibuf_bits)
         obuf_word = ceil_a_by_b(obuf_size, obuf_bank * obuf_bits)
+
         wbuf_bank_size = wbuf_word * wbuf_bits
         ibuf_bank_size = ibuf_word * ibuf_bits
         obuf_bank_size = obuf_word * obuf_bits
@@ -294,8 +306,20 @@ class Simulator(object):
 
 
         ##################################################
+        
+        # BB_PE配置
+        # size:
+        # block size:
         cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/8., 'read-write port': 0}
+        # 测试数据
+        # cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/4., 'read-write port': 0}
+        
+        # get_data_clean()??
+        # print(cfg_dict)
+
         wbuf_data = self.sram_obj.get_data_clean(cfg_dict)
+ 
+
         wbuf_read_energy = float(wbuf_data['read_energy_nJ']) / wbuf_bits
         wbuf_write_energy = float(wbuf_data['write_energy_nJ']) / wbuf_bits
         wbuf_leak_power = float(wbuf_data['leak_power_mW']) * wbuf_bank
@@ -457,6 +481,7 @@ class Simulator(object):
             This functions does an exhaustive search for finding the optimal
             Tiling and Ordering parameters
         """
+        
         B = batch_size
         I = (O - 1) * S + K
 
@@ -466,17 +491,27 @@ class Simulator(object):
         num_IC_tiles = int(math.ceil(log2(IC))) + 1
         num_OC_tiles = int(math.ceil(log2(math.ceil(float(OC)/self.accelerator.M)))) + 1
         num_B_tiles = int(math.ceil(log2(B))) + 1
-
+        
         self.logger.debug('Number of O Tiles: {}'.format(num_O_tiles))
         self.logger.debug('Number of IC Tiles: {}'.format(num_IC_tiles))
         self.logger.debug('Number of OC Tiles: {}'.format(num_OC_tiles))
         self.logger.debug('Number of B Tiles: {}'.format(num_B_tiles))
 
-        best_instructions_dict = {}
-        conv_params = self.accelerator, K, O, S, IC, OC, B, iprec, wprec, im2col, self.get_energy_cost()
 
+        best_instructions_dict = {}
+        # print('1')
+        # self.get_energy_cost() 还是得解决,不然跑不下去
+        conv_params = self.accelerator, K, O, S, IC, OC, B, iprec, wprec, im2col, self.get_energy_cost()
+        
+        
+        # print('2')
         best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
+        # print('3')
         stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False)
+        
+        # print(best_instructions)
+        # print(best_tiling)
+        # print(best_order)
 
         act_reads = stats.reads['act']
         wgt_reads = stats.reads['wgt']
@@ -511,11 +546,15 @@ class Simulator(object):
         self.logger.debug('Ops/Cycle: {:,.2f}'.format(ops_per_cycle))
         ops_per_cycle_per_pe = float(ops_per_cycle) / (self.accelerator.N * self.accelerator.M)
         self.logger.debug('Ops/Cycle/PE: {:,.4}'.format(ops_per_cycle_per_pe))
+        
 
         return stats, best_instructions
 
     def get_cycles(self, op, im2col=False):
+
+        
         if isinstance(op, Convolution):
+            # print('1')
             B, I, _, IC = op.data.shape
             _, O, _, OC = op.output_tensors.shape
             _, K, _, _  = op.weights.shape
@@ -528,8 +567,10 @@ class Simulator(object):
                 im2col = True # im2col for first layer
             else:
                 im2col = False
+
             # im2col = True
 
+            # print('1')
             return self.get_conv_cycles(K,
                                         O,
                                         S,

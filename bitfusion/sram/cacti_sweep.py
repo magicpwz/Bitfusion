@@ -17,6 +17,7 @@ class CactiSweep(object):
         if default_dict is not None:
             self.default_dict.update(default_dict)
         if os.path.isfile(self.csv_file):
+            # 初始化数据
             self._df = pandas.read_csv(csv_file)
         else:
             output_dict = {
@@ -88,14 +89,27 @@ class CactiSweep(object):
         return cfg_dict
 
     def locate(self, index_dict):
+        
         self._df = self._df.drop_duplicates()
         data = self._df
+        # cacti_sweep.csv 表中数据
+        # print(data)
+        # index_dict：
+        # 'size (bytes)': 128.0, 'block size (bytes)': 8.0, 'read-write port': 0
+        # 默认block size=4
+        # 默认size 1024，16384，4096，128，2048，512，4096，8192
+        # TODO ant自行修改过参数,得去看看cacti_sweep的参数修改和每个参数的意思
         for key in index_dict:
             data = data.loc[data[key] == index_dict[key]]
         return data
 
     def get_data(self, index_dict):
+        
         data = self.locate(index_dict)
+        
+        #筛选后的数据
+        # print(data)
+
         if len(data) == 0:
             print('No entry found in {}, running cacti'.format(self.csv_file))
             row_dict = index_dict.copy()
@@ -106,8 +120,13 @@ class CactiSweep(object):
         else:
             return data
 
+
+
     def get_data_clean(self, index_dict):
+        
+        
         data = self.get_data(index_dict)
+
         cols = [
                 'size (bytes)',
                 'block size (bytes)',

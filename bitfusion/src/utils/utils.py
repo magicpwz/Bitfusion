@@ -4,6 +4,7 @@ def floor_a_by_b(a, b):
     return int(float(a) / b)
 
 def ceil_a_by_b(a, b):
+    # a/b 向上取整
     return int(math.ceil(float(a) / b))
 
 

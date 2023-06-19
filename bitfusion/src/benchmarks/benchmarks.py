@@ -124,7 +124,9 @@ def get_bench_numbers(graph, sim_obj, batch_size=1):
     # for opname, op in graph.op_registry.iteritems():
     for opname, op in graph.op_registry.items():
         
+    
         out = sim_obj.get_cycles(op, batch_size)
+        
         # print('1')
         if out is not None:
             s, l = out
