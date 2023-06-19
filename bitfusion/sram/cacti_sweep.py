@@ -99,6 +99,7 @@ class CactiSweep(object):
         # 默认block size=4
         # 默认size 1024，16384，4096，128，2048，512，4096，8192
         # TODO ant自行修改过参数,得去看看cacti_sweep的参数修改和每个参数的意思
+        
         for key in index_dict:
             data = data.loc[data[key] == index_dict[key]]
         return data
@@ -117,6 +118,7 @@ class CactiSweep(object):
             self._df = self._df.append(pandas.DataFrame([row_dict]), ignore_index=True)
             self.update_csv()
             return self.locate(index_dict)
+
         else:
             return data
 

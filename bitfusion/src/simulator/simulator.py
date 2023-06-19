@@ -273,16 +273,22 @@ class Simulator(object):
         M = self.accelerator.M
         pmax = self.accelerator.pmax
         pmin = self.accelerator.pmin
+
         wbuf_size = self.accelerator.sram['wgt'] * 8
         ibuf_size = self.accelerator.sram['act'] * 8
         obuf_size = self.accelerator.sram['out'] * 8
 
         #有图示
+        #bank可以只是一个标志
+        #N,M:矩阵的行列
+        #bank=512表示这个bank内部有512个WBUF
         wbuf_bank = N * M
         ibuf_bank = N
         obuf_bank = M
         
-        
+        #一个 WBUF or IBUF 给出的数据
+        #默认bitfusion是32
+        #精度的影响？？
         wbuf_bits = (pmax * pmax / pmin)
         ibuf_bits = (pmax * pmax / pmin)
 
@@ -291,15 +297,27 @@ class Simulator(object):
         # ibuf_bits = 32
 
         obuf_bits = 32
+        # print('wbuf_size',wbuf_size)
+        # print('wbuf_bank',wbuf_bank)
+        # print('wbuf_bits',wbuf_bits)
+        # print('wbuf_bank * wbuf_bits',wbuf_bank * wbuf_bits)
 
+        #Bitfusion 默认wbuf_word:32
+        #WORD=32 表示总大小能分32个bank
         wbuf_word = ceil_a_by_b(wbuf_size, wbuf_bank * wbuf_bits)
+
         ibuf_word = ceil_a_by_b(ibuf_size, ibuf_bank * ibuf_bits)
         obuf_word = ceil_a_by_b(obuf_size, obuf_bank * obuf_bits)
 
+        # print(wbuf_word)
+
+        #多个bank中的单个WBUF并行时输出的值
         wbuf_bank_size = wbuf_word * wbuf_bits
         ibuf_bank_size = ibuf_word * ibuf_bits
         obuf_bank_size = obuf_word * obuf_bits
-
+        
+        # print(wbuf_bank_size)
+        
         assert wbuf_bank_size * wbuf_bank == wbuf_size
         assert ibuf_bank_size * ibuf_bank == ibuf_size
         assert obuf_bank_size * obuf_bank == obuf_size
@@ -313,17 +331,22 @@ class Simulator(object):
         cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/8., 'read-write port': 0}
         # 测试数据
         # cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/4., 'read-write port': 0}
-        
+        # size (bytes):单次多Bank单WBUF输出的数据Bytes,(可能是当脉动阵列，阶梯输入，每次进一个WBUF)
+        # block size:单个WBUF的输出
         # get_data_clean()??
-        # print(cfg_dict)
+
+        print(cfg_dict)
+
 
         wbuf_data = self.sram_obj.get_data_clean(cfg_dict)
- 
+        # print(wbuf_data)
 
         wbuf_read_energy = float(wbuf_data['read_energy_nJ']) / wbuf_bits
         wbuf_write_energy = float(wbuf_data['write_energy_nJ']) / wbuf_bits
+        #静态功耗
         wbuf_leak_power = float(wbuf_data['leak_power_mW']) * wbuf_bank
         wbuf_area = float(wbuf_data['area_mm^2']) * wbuf_bank
+
 
         self.logger.debug('WBUF :')
         self.logger.debug('\tBanks                       : {0:>8}'.format(wbuf_bank))
@@ -335,6 +358,7 @@ class Simulator(object):
         self.logger.debug('\tRead Energy                 : {0:>8.4f} pJ/bit'.format(wbuf_read_energy * 1.e3))
         self.logger.debug('\tWrite Energy                : {0:>8.4f} pJ/bit'.format(wbuf_write_energy * 1.e3))
         ##################################################
+        
         cfg_dict = {'size (bytes)': ibuf_bank_size /8., 'block size (bytes)': ibuf_bits/8., 'read-write port': 0}
         ibuf_data = self.sram_obj.get_data_clean(cfg_dict)
         ibuf_read_energy = float(ibuf_data['read_energy_nJ']) / ibuf_bits
@@ -352,7 +376,9 @@ class Simulator(object):
         self.logger.debug('\tRead Energy                 : {0:>8.4f} pJ/bit'.format(ibuf_read_energy * 1.e3))
         self.logger.debug('\tWrite Energy                : {0:>8.4f} pJ/bit'.format(ibuf_write_energy * 1.e3))
         ##################################################
+        
         cfg_dict = {'size (bytes)': obuf_bank_size /8., 'block size (bytes)': obuf_bits/8., 'read-write port': 1}
+        
         obuf_data = self.sram_obj.get_data_clean(cfg_dict)
         obuf_read_energy = float(obuf_data['read_energy_nJ']) / obuf_bits
         obuf_write_energy = float(obuf_data['write_energy_nJ']) / obuf_bits
@@ -370,20 +396,34 @@ class Simulator(object):
         self.logger.debug('\tWrite Energy                : {0:>8.4f} pJ/bit'.format(obuf_write_energy * 1.e3))
         ##################################################
         # Get stats for systolic array
+        
+        
         core_csv = os.path.join('./results', 'systolic_array_synth.csv')
+        
         core_synth_data = pandas.read_csv(core_csv)
 
         lookup_dict = {}
         lookup_dict['Max Precision (bits)'] = pmax
         lookup_dict['Min Precision (bits)'] = pmin
+
         lookup_dict['N'] = N
         lookup_dict['M'] = M
+        
         core_data = lookup_pandas_dataframe(core_synth_data, lookup_dict)
+        
+
+        print(len(core_data))
+
         if len(core_data) == 0:
+
             lookup_dict['N'] = 4
             lookup_dict['M'] = 4
+            # 把长宽修正到4 4,最大最小精度还是得符合CSV文件
             core_data = lookup_pandas_dataframe(core_synth_data, lookup_dict)
+            
+            # 过个断言,csv文件定死了最大最小精度
             assert len(core_data) == 1
+
             core_area = float(core_data['Area (um^2)']) * 1.e-6 * (N * M) / 16.
             core_dyn_power = float(core_data['Dynamic Power (nW)']) * (N * M) / 16.
             core_dyn_energy = core_dyn_power / float(core_data['Frequency'])
@@ -395,6 +435,7 @@ class Simulator(object):
             core_dyn_energy = core_dyn_power / float(core_data['Frequency'])
             core_leak_power = float(core_data['Leakage Power (nW)'])
             core_leak_energy = core_leak_power / float(core_data['Frequency'])
+        
         self.logger.debug('Core :')
         self.logger.debug('\tDimensions              : {0}x{1}-systolic array'.format(N, M))
         self.logger.debug('\tMax-Precision           : {}'.format(pmax))
@@ -410,6 +451,7 @@ class Simulator(object):
 
 
     def __str__(self):
+
         ret = ''
         ret += 'Simulator object'
         ret += '\n'
@@ -417,6 +459,7 @@ class Simulator(object):
         ret += '\n'
         ret += '\tMin supported precision: {}'.format(self.accelerator.pmin)
         ret += '\n'
+        
         ret += '\tSystolic array size: {} -inputs x {} -outputs'.format(
                 self.accelerator.N,
                 self.accelerator.M)
