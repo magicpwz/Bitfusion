@@ -330,7 +330,8 @@ class Simulator(object):
         # block size:
         cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/8., 'read-write port': 0}
         # 测试数据
-        # cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/4., 'read-write port': 0}
+        # cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/2., 'read-write port': 0}
+        
         # size (bytes):单次多Bank单WBUF输出的数据Bytes,(可能是当脉动阵列，阶梯输入，每次进一个WBUF)
         # block size:单个WBUF的输出
         # get_data_clean()??
@@ -359,7 +360,12 @@ class Simulator(object):
         self.logger.debug('\tWrite Energy                : {0:>8.4f} pJ/bit'.format(wbuf_write_energy * 1.e3))
         ##################################################
         
+        # 原始
         cfg_dict = {'size (bytes)': ibuf_bank_size /8., 'block size (bytes)': ibuf_bits/8., 'read-write port': 0}
+        print('cfg_dict',cfg_dict)
+        # 测试
+        # cfg_dict = {'size (bytes)': ibuf_bank_size /8., 'block size (bytes)': ibuf_bits/2., 'read-write port': 0}
+        
         ibuf_data = self.sram_obj.get_data_clean(cfg_dict)
         ibuf_read_energy = float(ibuf_data['read_energy_nJ']) / ibuf_bits
         ibuf_write_energy = float(ibuf_data['write_energy_nJ']) / ibuf_bits
@@ -420,7 +426,7 @@ class Simulator(object):
             lookup_dict['M'] = 4
             # 把长宽修正到4 4,最大最小精度还是得符合CSV文件
             core_data = lookup_pandas_dataframe(core_synth_data, lookup_dict)
-            
+            print('lookup_dict',lookup_dict)
             # 过个断言,csv文件定死了最大最小精度
             assert len(core_data) == 1
 

@@ -48,9 +48,11 @@ def conv(tensor_in, filters=32, stride=None, kernel_size=3, pad='SAME',
     weights = get_tensor(shape=(filters, kernel_size, kernel_size, input_channels),
                          name='weights',
                          dtype=w_dtype)
+    
     biases = get_tensor(shape=(filters),
                          name='biases',
                          dtype=FixedPoint(32,w_dtype.frac_bits + tensor_in.dtype.frac_bits))
+    
     _conv = conv2D(tensor_in, weights, biases, stride=stride, pad=pad, dtype=c_dtype)
 
     if act == 'leakyReLU':
@@ -148,8 +150,17 @@ def get_alex_net():
             i = get_tensor(shape=(batch_size,227,227,3), name='data', dtype=FQDtype.FXP8, trainable=False)
 
         with g.name_scope('conv1_a'):
+            # 得修改这个卷积函数
+            # conv 定点4bit量化
+            # c_dtype:conv2d量化参数---暂时不知道意思
+            # w_dtype:conv_weight量化
+            # 可以参考ant代码，只在fc层做了c_dtype的指定精度量化
             conv1_a = conv(i, filters=48, kernel_size=11, stride=(1,4,4,1), pad='VALID',
                     c_dtype=FQDtype.FXP4, w_dtype=FQDtype.FXP4)
+            
+            # print('test:',conv1_a)
+            # test: conv1_a/TypeCastOp[16,55,55,48] (FXP4 (0,4))
+
         with g.name_scope('pool1_a'):
             pool1_a = maxPool(conv1_a, pooling_kernel=(1,2,2,1), stride=(1,2,2,1), pad='VALID')
 

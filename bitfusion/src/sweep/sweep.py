@@ -56,6 +56,7 @@ class SimulatorSweep(object):
             list_bw = [sim_obj.accelerator.mem_if_width]
 
         if list_bench is None:
+            # 设置测试的网络的结构name
             list_bench = benchmarks.benchlist
 
         if list_wbuf is None:
@@ -106,8 +107,14 @@ class SimulatorSweep(object):
 
                                                 # nn是什么？？-->网络结构的数据
                                                 # b: Network
-                                                nn = benchmarks.get_bench_nn(b, WRPN=True)
-                                                
+                                                # nn_type:<class 'dnnweaver2.graph.Graph'>
+                                                # 默认
+                                                # nn = benchmarks.get_bench_nn(b, WRPN=True)
+                                                nn = benchmarks.get_bench_nn(b)
+                                                # print('NN',nn)
+
+                                                # print('NN_type',type(nn))
+
                                                 if len(results) == 0:
                                                     self.logger.info('Simulating Benchmark: {}'.format(b))
                                                     self.logger.info('N x M = {} x {}'.format(n, m))
