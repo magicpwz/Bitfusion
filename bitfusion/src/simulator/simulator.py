@@ -15,6 +15,7 @@ from bitfusion.src.simulator.energy import EnergyTuple
 from bitfusion.sram.cacti_sweep import CactiSweep
 import os
 import pandas
+import sys
 
 from dnnweaver2.tensorOps.cnn import Convolution, MatMul
 
@@ -657,8 +658,10 @@ class Simulator(object):
             Ni: Input neurons
             No: Output neurons
             batch_size: Batch size for FC layer
+
             iprec: Precision for activations (bits)
             wprec: Precision for weights (bits)
+
             batch_size: Batch size for the layer
 
         description:
@@ -685,15 +688,20 @@ class Simulator(object):
         """
 
         B = batch_size
+
         I = (O - 1) * S + K
 
         # We do not tile the "K" dimension and compute an entire 2-D conv at a
         # time
+        # 以2为底O的对数
         num_O_tiles = int(math.ceil(log2(O))) + 1
+
         num_IC_tiles = int(math.ceil(log2(IC))) + 1
+
         num_OC_tiles = (
             int(math.ceil(log2(math.ceil(float(OC) / self.accelerator.M)))) + 1
         )
+
         num_B_tiles = int(math.ceil(log2(B))) + 1
 
         self.logger.debug("Number of O Tiles: {}".format(num_O_tiles))
@@ -701,9 +709,16 @@ class Simulator(object):
         self.logger.debug("Number of OC Tiles: {}".format(num_OC_tiles))
         self.logger.debug("Number of B Tiles: {}".format(num_B_tiles))
 
+        # print("Number of O Tiles: {}".format(num_O_tiles))
+        # print("Number of IC Tiles: {}".format(num_IC_tiles))
+        # print("Number of OC Tiles: {}".format(num_OC_tiles))
+        # print("Number of B Tiles: {}".format(num_B_tiles))
+
+        # sys.exit()
         best_instructions_dict = {}
         # print('1')
         # self.get_energy_cost() 还是得解决,不然跑不下去
+
         conv_params = (
             self.accelerator,
             K,
@@ -718,14 +733,17 @@ class Simulator(object):
             self.get_energy_cost(),
         )
 
-        # print('2')
+        # TODO 分配相关？？
+        # 具体优化细节
         best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
-        # print('3')
+
         stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False)
 
-        # print(best_instructions)
-        # print(best_tiling)
-        # print(best_order)
+        print("best_instructions", best_instructions)
+        print("best_tiling", best_tiling)
+        print("best_order", best_order)
+
+        sys.exit()
 
         act_reads = stats.reads["act"]
         wgt_reads = stats.reads["wgt"]
@@ -756,24 +774,49 @@ class Simulator(object):
         )
 
         self.logger.debug("Total Cycles: {:,}".format(best_cycles))
+
+        # 执行完这个layer需要的cycle
+        print("Total Cycles: {:,}".format(best_cycles))
+        sys.exit()
+
         cycles_per_batch = ceil_a_by_b(best_cycles, B)
         self.logger.debug("Total Cycles per batch: {:,}".format(cycles_per_batch))
+
         ops_per_cycle = float(num_ops) / best_cycles
         self.logger.debug("Ops/Cycle: {:,.2f}".format(ops_per_cycle))
+
+        # PE
         ops_per_cycle_per_pe = float(ops_per_cycle) / (
             self.accelerator.N * self.accelerator.M
         )
+        # 0.781 0.9998
         self.logger.debug("Ops/Cycle/PE: {:,.4}".format(ops_per_cycle_per_pe))
+        sys.exit()
+        # print("Ops/Cycle/PE: {:,.4}".format(ops_per_cycle_per_pe))
 
         return stats, best_instructions
 
     def get_cycles(self, op, im2col=False):
+        # 卷积or全连接
         if isinstance(op, Convolution):
             # print('1')
+
+            # B: batch_size
+            # I/O: image宽高
+            # IC: 输入通道
+
             B, I, _, IC = op.data.shape
+            # print("op.data.shape", op.data.shape)
+
             _, O, _, OC = op.output_tensors.shape
+            # print("op.output_tensors.shape", op.output_tensors.shape)
+            # 中断
+            # sys.exit()
             _, K, _, _ = op.weights.shape
             _, S, _, _ = op.stride
+
+            # iprec: Precision for activations (bits)
+            # wprec: Precision for weights (bits)
 
             iprec = op.data.dtype.bits
             wprec = op.weights.dtype.bits
@@ -787,6 +830,7 @@ class Simulator(object):
 
             # print('1')
             return self.get_conv_cycles(K, O, S, IC, OC, iprec, wprec, B, im2col)
+
         elif isinstance(op, MatMul):
             B = op.data.shape[0]
             OC, IC = op.weights.shape

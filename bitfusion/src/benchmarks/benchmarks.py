@@ -126,13 +126,14 @@ def get_bench_numbers(graph, sim_obj, batch_size=1):
     # for opname, op in graph.op_registry.iteritems():
     for opname, op in graph.op_registry.items():
         
-    
+        
         out = sim_obj.get_cycles(op, batch_size)
         
         # print('1')
         if out is not None:
             s, l = out
             stats[opname] = s
+
     return stats
 
 # 网络结构的操作
@@ -142,6 +143,7 @@ def get_alex_net():
     Krizhevsky, Sutskever, and Hinton, 2012
     '''
     g = Graph('AlexNet', dataset='imagenet', log_level=logging.INFO)
+
     batch_size = 16
 
     with g.as_default():
