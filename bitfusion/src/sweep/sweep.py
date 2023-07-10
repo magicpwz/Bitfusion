@@ -5,6 +5,7 @@ import logging
 from bitfusion.src.simulator.simulator import Simulator
 from bitfusion.src.utils.utils import lookup_pandas_dataframe
 import bitfusion.src.benchmarks.benchmarks as benchmarks
+import sys
 
 
 class SimulatorSweep(object):
@@ -146,7 +147,7 @@ class SimulatorSweep(object):
                                                 # nn = benchmarks.get_bench_nn(b, WRPN=True)
 
                                                 nn = benchmarks.get_bench_nn(b)
-                                                
+
                                                 # print('NN',nn)
 
                                                 # print('NN_type',type(nn))
@@ -190,14 +191,15 @@ class SimulatorSweep(object):
 
                                                     # print('hh')
 
-                                                    # print('stats',stats)
+                                                    # print("stats", type(stats))
+                                                    # sys.exit()
                                                     #  <bitfusion.src.simulator.stats.Stats object at 0x7f5d1cbb0190>
 
                                                     for layer in stats:
                                                         cycles = stats[
                                                             layer
                                                         ].total_cycles
-                                                        
+
                                                         reads = stats[layer].reads
                                                         writes = stats[layer].writes
                                                         stalls = stats[

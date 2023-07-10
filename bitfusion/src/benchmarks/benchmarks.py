@@ -170,6 +170,7 @@ def get_bench_numbers(graph, sim_obj, batch_size=1):
         # sys.exit()
 
         if out is not None:
+            # l 是best_instructions 没有被传出去
             s, l = out
             stats[opname] = s
             # print('out_s',s)

@@ -742,7 +742,7 @@ class Simulator(object):
 
         best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
         # best_instructions 操作
-        
+
         stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False)
 
         # 这三个参数不是很懂
@@ -839,7 +839,7 @@ class Simulator(object):
                 im2col = False
 
             # im2col = True
-
+            
             return self.get_conv_cycles(K, O, S, IC, OC, iprec, wprec, B, im2col)
 
         elif isinstance(op, MatMul):
