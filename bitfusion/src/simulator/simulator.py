@@ -689,11 +689,13 @@ class Simulator(object):
 
         B = batch_size
 
+        # 输入数据大小
         I = (O - 1) * S + K
 
         # We do not tile the "K" dimension and compute an entire 2-D conv at a
         # time
         # 以2为底O的对数
+        # 分模块？？
         num_O_tiles = int(math.ceil(log2(O))) + 1
 
         num_IC_tiles = int(math.ceil(log2(IC))) + 1
@@ -719,6 +721,8 @@ class Simulator(object):
         # print('1')
         # self.get_energy_cost() 还是得解决,不然跑不下去
 
+        # 输入数据大小 可反推
+        # I = (O - 1) * S + K
         conv_params = (
             self.accelerator,
             K,
@@ -735,15 +739,18 @@ class Simulator(object):
 
         # TODO 分配相关？？
         # 具体优化细节
-        best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
 
+        best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
+        # best_instructions 操作
+        
         stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False)
 
+        # 这三个参数不是很懂
         print("best_instructions", best_instructions)
         print("best_tiling", best_tiling)
         print("best_order", best_order)
 
-        sys.exit()
+        # sys.exit()
 
         act_reads = stats.reads["act"]
         wgt_reads = stats.reads["wgt"]
@@ -751,6 +758,7 @@ class Simulator(object):
         dram_reads = stats.reads["dram"]
         out_writes = stats.writes["out"]
         dram_writes = stats.writes["dram"]
+        # 看cycle
         best_cycles = stats.total_cycles
 
         num_ops = O * O * K * K * IC * OC * B
@@ -762,6 +770,7 @@ class Simulator(object):
         self.logger.debug("Kernel Size: {}x{}x{}x{}".format(K, K, IC, OC))
         self.logger.debug("Output Size: {}x{}x{}".format(O, O, OC))
         self.logger.debug("Stride Size: {}x{}".format(S, S))
+        # 输入数据大小
         self.logger.debug("Input  Size: {}x{}x{}".format(I, I, IC))
 
         self.logger.debug("Max Precision: {}".format(self.accelerator.pmax))
@@ -777,7 +786,7 @@ class Simulator(object):
 
         # 执行完这个layer需要的cycle
         print("Total Cycles: {:,}".format(best_cycles))
-        sys.exit()
+        # sys.exit()
 
         cycles_per_batch = ceil_a_by_b(best_cycles, B)
         self.logger.debug("Total Cycles per batch: {:,}".format(cycles_per_batch))
@@ -789,9 +798,10 @@ class Simulator(object):
         ops_per_cycle_per_pe = float(ops_per_cycle) / (
             self.accelerator.N * self.accelerator.M
         )
+
         # 0.781 0.9998
         self.logger.debug("Ops/Cycle/PE: {:,.4}".format(ops_per_cycle_per_pe))
-        sys.exit()
+        # sys.exit()
         # print("Ops/Cycle/PE: {:,.4}".format(ops_per_cycle_per_pe))
 
         return stats, best_instructions
@@ -808,6 +818,7 @@ class Simulator(object):
             B, I, _, IC = op.data.shape
             # print("op.data.shape", op.data.shape)
 
+            # O,K 也能算出数据大小
             _, O, _, OC = op.output_tensors.shape
             # print("op.output_tensors.shape", op.output_tensors.shape)
             # 中断
@@ -818,6 +829,7 @@ class Simulator(object):
             # iprec: Precision for activations (bits)
             # wprec: Precision for weights (bits)
 
+            # 量化精度
             iprec = op.data.dtype.bits
             wprec = op.weights.dtype.bits
 
@@ -828,7 +840,6 @@ class Simulator(object):
 
             # im2col = True
 
-            # print('1')
             return self.get_conv_cycles(K, O, S, IC, OC, iprec, wprec, B, im2col)
 
         elif isinstance(op, MatMul):

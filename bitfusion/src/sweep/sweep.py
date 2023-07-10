@@ -144,7 +144,9 @@ class SimulatorSweep(object):
                                                 # nn_type:<class 'dnnweaver2.graph.Graph'>
                                                 # 默认
                                                 # nn = benchmarks.get_bench_nn(b, WRPN=True)
+
                                                 nn = benchmarks.get_bench_nn(b)
+                                                
                                                 # print('NN',nn)
 
                                                 # print('NN_type',type(nn))
@@ -195,6 +197,7 @@ class SimulatorSweep(object):
                                                         cycles = stats[
                                                             layer
                                                         ].total_cycles
+                                                        
                                                         reads = stats[layer].reads
                                                         writes = stats[layer].writes
                                                         stalls = stats[

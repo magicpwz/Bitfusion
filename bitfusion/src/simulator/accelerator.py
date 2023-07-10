@@ -64,7 +64,7 @@ class Accelerator(object):
                                                              im2col)
         return compute_stats
 
-
+    
     def get_perf_factor(self, iprec, wprec):
         iprec = max(iprec, self.pmin)
         wprec = max(wprec, self.pmin)
@@ -90,8 +90,10 @@ class Accelerator(object):
             ni = kw * kh * ic
             no = oc
             batch = b * oh * ow
+            
             compute_cycles = batch * ceil_a_by_b(no, self.M) * \
                     (ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec, wprec)) + overhead)
+            
         else:
             compute_cycles = b * ceil_a_by_b(oc, self.M) * \
                     ow * oh * kw * kh * \

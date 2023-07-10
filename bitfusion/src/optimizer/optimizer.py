@@ -32,6 +32,7 @@ tile_deps["OC/oc"] = {"act": False, "wgt": True, "out": True}
 # inner_loop['kw'] = {'act': True, 'wgt': True, 'out': False}
 
 
+# 最重点
 def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     """
     Returns cycles and memory accesses to DRAM, IBUF, OBUF, and WBUF
@@ -47,6 +48,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     kw = kh = K
 
+    # 这个参数是什么含义？？？
     perf_factor = acc_obj.get_perf_factor(iprec, wprec)
 
     writes = {}
@@ -83,6 +85,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     writes["out"] = ow * oh * ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * b * oprec
     reads["out"] = ow * oh * ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * b * oprec
 
+    # 资源使用判断
+    # overflow上限
     # Skip if overutilizing resources
     # TODO check bytes/bits
     overflow = False
@@ -102,6 +106,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             print(b, ow, oh, ic, oc)
         overflow = True
     if overflow:
+        # sys.exit()
         if verbose:
             print("Activation size: {} bytes".format(writes["act"] / 8.0))
             print("Weights size: {} bytes".format(writes["wgt"] / 8.0))
@@ -115,6 +120,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     for namespace in reads:
         max_read_size[namespace] = reads[namespace]
 
+    # 首先是循环块的优化
     # First the loop block optimizations
     stats = Stats()
     write_promote = {"wgt": True, "act": True, "out": True}
@@ -125,7 +131,9 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         logger.debug("\tTiling: {}".format(tiling))
         logger.debug("\tReads : {}".format(reads))
         logger.debug("\tWrites: {}".format(writes))
+
     for loop in reversed(order_type):
+        # besttiling -> tiling[loop]
         num_tiles, tile_size = tiling[loop]
         # promote all writes
         for namespace in writes:
@@ -174,6 +182,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         stats.reads[namespace] = reads[namespace]
         stats.writes["dram"] += reads[namespace]
 
+    # 层内优化
     # Next the inner loop optimizations
     if im2col:
         # With im2col, loops are:
@@ -217,6 +226,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         ws_energy = (os_loop * is_loop) * (wprec + ws_loop * (iprec + oprec))
 
     min_energy = min(is_energy, ws_energy, os_energy)
+    # 和精度无关的类似定值
     num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
 
     if is_energy == min_energy:
@@ -257,9 +267,11 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     total_dram_accesses = stats.reads["dram"] + stats.writes["dram"]
     middle_dram_accesses = total_dram_accesses - initial_dram_reads - final_dram_writes
 
+    # acc_obj 加速器仿真 accelerator.py
     compute_cycles = num_tiles * acc_obj.get_compute_cycles(
         ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col
     )
+
     memory_cycles_required = ceil_a_by_b(middle_dram_accesses, acc_obj.mem_if_width)
 
     memory_stalls = max(0, memory_cycles_required - compute_cycles) + latency
@@ -279,16 +291,28 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 def optimize_for_order(conv_params):
     # Generate permutations for the order
     loops = ["B/b", "OW/ow", "OH/oh", "IC/ic", "OC/oc"]
-    # 生成loops中所有可能的排列
+    # 生成loops中所有可能的排列 A^5_5=120
     order = set(permutations(loops))
+    # print(len(order))
+    # sys.exit()
 
     return_dict = {}
     acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
 
+    # 偏函数 固定该函数的第一个参数为 conv_params
     _bound_optimizer_method = functools.partial(_optimize_for_order, conv_params)
 
     try:
         pool = Pool(cpu_count())
+
+        """
+            results = pool.map_async(_bound_optimizer_method, order).get(10000) 使用进程池的 map_async 方法，将 _bound_optimizer_method 函数应用于 order 中的每个元素。
+            map_async 方法会异步地并行执行函数，并返回一个异步结果对象。
+            map_async 方法的第一个参数是要执行的函数 _bound_optimizer_method,第二个参数是要迭代执行函数的可迭代对象 order。
+            .get(10000) 方法是用于获取异步结果的方式，其中的参数 10000 表示最多等待 10000 秒，直到获取到所有结果。
+            这样,results 将包含 _bound_optimizer_method 在进程池中并行执行后的结果
+        """
+        # 与精度无关 暂不改动
         results = pool.map_async(_bound_optimizer_method, order).get(10000)
         # print(results)
 
@@ -317,6 +341,7 @@ def optimize_for_order(conv_params):
         energy_list = [x[-1] for x in results]
 
         for r in results:
+            # tiling来自result
             tiling, order_type, cycles, energy = r
 
             # print("tiling", tiling)
@@ -334,6 +359,7 @@ def optimize_for_order(conv_params):
                 best_tiling = tiling
                 best_order = order_type
         return (
+            # 重要
             get_loop_instructions(conv_params, best_tiling, best_order),
             best_tiling,
             best_order,
@@ -356,6 +382,7 @@ def get_loop_instructions(conv_params, tiling, order_type):
     num_oc, oc = tiling["OC/oc"]
 
     instructions = {}
+    # 这些instructions和I都有关
     instructions["B/b"] = [num_b, I * I * IC * b, 0, O * O * OC * b]
     instructions["OW/ow"] = [num_ow, ow * S, 0, ow]
     instructions["OH/oh"] = [num_oh, I * S, 0, O]
@@ -412,6 +439,7 @@ def get_loop_instructions(conv_params, tiling, order_type):
     if im2col:
         act_read_size = ow * oh * ceil_a_by_b(K * K, acc_obj.N) * b * iprec * acc_obj.N
         max_act_size = B * O * O * ceil_a_by_b(K * K, acc_obj.N) * acc_obj.N * iprec
+
     else:
         act_read_size = iw * ih * ic * b * iprec
         max_act_size = B * I * I * IC * iprec
@@ -424,6 +452,7 @@ def get_loop_instructions(conv_params, tiling, order_type):
     if wgt_read_size > acc_obj.sram["wgt"] * 8 / 2.0:
         print("error")
         return
+
     if act_read_size > acc_obj.sram["act"] * 8 / 2.0:
         return
     if out_read_size > acc_obj.sram["out"] * 8 / 2.0:
@@ -477,6 +506,8 @@ def get_loop_instructions(conv_params, tiling, order_type):
     no = oh * ow * oc
     b = b
 
+    # 计算？？？
+    # -> loop_stack
     instruction_ordered.insert_compute(
         acc_obj.get_compute_stats, ic, oc, ow, oh, b, K, K, iprec, wprec, im2col
     )
@@ -489,16 +520,34 @@ def get_loop_instructions(conv_params, tiling, order_type):
 
 def _optimize_for_order(conv_params, order_type, verbose=False):
     """
+    调度优化？？
+    这里不涉及精度问题
     For a given ordering, optimizes tiling
     Args:
         conv_params: A tuple with convolution params
         order_type: ordering loop
     """
+    """
+        self.accelerator:这是一个对象的属性或变量,表示卷积操作所使用的加速器。
+        K:这是一个整数,表示卷积核的尺寸或大小。
+        O:这是一个整数,表示输出特征图的尺寸或大小。
+        S:这是一个整数,表示卷积的步幅或 stride。
+        IC:这是一个整数,表示输入通道数或输入特征图的深度。
+        OC:这是一个整数,表示输出通道数或输出特征图的深度。
+        B:这是一个整数,表示批量大小或输入数据的数量。
+        iprec:这是一个字符串或数值,表示输入数据的精度或位数。
+        wprec:这是一个字符串或数值,表示权重数据的精度或位数。
+        im2col:这是一个布尔值,表示是否使用 im2col 技术进行卷积计算。
+        self.get_energy_cost()：这是一个方法调用,表示获取能量消耗的值。
+    """
+
     acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+
     I = (O - 1) * S + K
 
     # We do not tile the "K" dimension and compute an entire 2-D conv at a
     # time
+    # num_O_tiles输出要多少个F-PE
     num_O_tiles = int(math.ceil(log2(O))) + 1
     num_IC_tiles = int(math.ceil(log2(IC))) + 1
 

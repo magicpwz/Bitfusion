@@ -1067,7 +1067,12 @@ def addBias(i, b, dim, name=None, dtype=None):
 
 def conv2D(i, w, b, name=None, stride=None, pad='SAME', group=1, dtype=None):
     g = get_default_graph()
-    op = Convolution(i, w, b, name, stride=stride, pad=pad, group=group, dtype=dtype)
+
+    # 
+    op = Convolution(i, w, b, name, 
+                     stride=stride, pad=pad, 
+                     group=group, dtype=dtype)
+    
     return typecast(op.output_tensors, dtype)
 
 def maxPool(i, pooling_kernel, stride=(1,2,2,1), pad='VALID', name=None, dtype=None):
