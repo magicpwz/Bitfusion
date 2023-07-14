@@ -1,5 +1,6 @@
 from bitfusion.src.utils.utils import ceil_a_by_b, log2
 from bitfusion.src.simulator.stats import Stats
+import sys
 
 class Accelerator(object):
     def __init__(self, N, M, pmax, pmin, sram, mem_if_width, frequency):
@@ -99,6 +100,8 @@ class Accelerator(object):
                     ow * oh * kw * kh * \
                     (ceil_a_by_b(ic, self.N * self.get_perf_factor(iprec, wprec)) + overhead)
 
+        # print('compute_cycles',compute_cycles)
+        # sys.exit()
         return compute_cycles
 
     def get_area(self):

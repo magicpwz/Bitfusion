@@ -226,8 +226,15 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         ws_energy = (os_loop * is_loop) * (wprec + ws_loop * (iprec + oprec))
 
     min_energy = min(is_energy, ws_energy, os_energy)
+    
     # 和精度无关的类似定值
     num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
+    # print('num_b',num_b)
+    # print('num_ow',num_ow)
+    # print('num_oh',num_oh)
+    # print('num_ic',num_ic)
+    # print('num_oc',num_oc)
+
 
     if is_energy == min_energy:
         if verbose:
@@ -268,14 +275,23 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     middle_dram_accesses = total_dram_accesses - initial_dram_reads - final_dram_writes
 
     # acc_obj 加速器仿真 accelerator.py
+
+    # print('num_tiles',num_tiles)
+    # sys.exit()
+
     compute_cycles = num_tiles * acc_obj.get_compute_cycles(
         ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col
     )
 
+    # print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
+
     memory_cycles_required = ceil_a_by_b(middle_dram_accesses, acc_obj.mem_if_width)
 
     memory_stalls = max(0, memory_cycles_required - compute_cycles) + latency
+
+
     stats.total_cycles = compute_cycles + memory_stalls
+    
     stats.mem_stall_cycles = memory_stalls
 
     if verbose:
@@ -556,7 +572,7 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
         num_OC_tiles = int(math.ceil(log2(OC))) + 1
     else:
         num_OC_tiles = int(math.ceil(log2(math.ceil(float(OC) / acc_obj.M)))) + 1
-
+    
     num_B_tiles = int(math.ceil(log2(B))) + 1
 
     best_cycles = None

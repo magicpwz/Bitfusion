@@ -739,7 +739,7 @@ class Simulator(object):
 
         # TODO 分配相关？？
         # 具体优化细节
-
+        
         best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
         # best_instructions 操作
 
@@ -760,6 +760,8 @@ class Simulator(object):
         dram_writes = stats.writes["dram"]
         # 看cycle
         best_cycles = stats.total_cycles
+
+        
 
         num_ops = O * O * K * K * IC * OC * B
 
