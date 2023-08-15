@@ -95,10 +95,13 @@ class Simulator(object):
         frequency = self.config.getint("accelerator", "frequency")
         self.logger.debug("Frequency: {:,} Hz".format(frequency))
 
-        # 单边
+        # 单边 Fusion Units
         hp_peak_throughput = systolic_dim[0] * systolic_dim[1] * systolic_dim[2]
-        # 内部小块
+
+        # 内部小块 BitBricks
         peak_throughput = hp_peak_throughput * (int(pmax / pmin) ** 2)
+
+        # 那么这个bb的内部融合配置呢？？
 
         # 数据吞吐量
         self.logger.debug(
@@ -129,7 +132,6 @@ class Simulator(object):
 
         # 45nm
         tech_node = 45
-
         # sram_csv 废弃变量
         sram_csv = "hardware_sweep/sram_results.csv"
 
@@ -191,6 +193,7 @@ class Simulator(object):
             "block size (bytes)": wbuf_bits / 8.0,
             "read-write port": 0,
         }
+        # wbuf area
         wbuf_data = self.sram_obj.get_data_clean(cfg_dict)
         wbuf_read_energy = float(wbuf_data["read_energy_nJ"]) / wbuf_bits
         wbuf_write_energy = float(wbuf_data["write_energy_nJ"]) / wbuf_bits
@@ -199,37 +202,21 @@ class Simulator(object):
 
         self.logger.debug("WBUF :")
         self.logger.debug("\tBanks                       : {0:>8}".format(wbuf_bank))
-        self.logger.debug(
-            "\tBitWidth                    : {0:>8} bits".format(wbuf_bits)
-        )
+        self.logger.debug("\tBitWidth                    : {0:>8} bits".format(wbuf_bits))
         self.logger.debug("\tWords                       : {0:>8}".format(wbuf_word))
-        self.logger.debug(
-            "\tTotal Size                  : {0:>8} kBytes".format(
-                wbuf_size / 8.0 / 1024.0
-            )
-        )
-        self.logger.debug(
-            "\tTotal Area                  : {0:>8.2f} mm^2".format(wbuf_area)
-        )
-        self.logger.debug(
-            "\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(wbuf_leak_power)
-        )
-        self.logger.debug(
-            "\tRead Energy                 : {0:>8.4f} pJ/bit".format(
-                wbuf_read_energy * 1.0e3
-            )
-        )
-        self.logger.debug(
-            "\tWrite Energy                : {0:>8.4f} pJ/bit".format(
-                wbuf_write_energy * 1.0e3
-            )
-        )
+        self.logger.debug("\tTotal Size                  : {0:>8} kBytes".format(wbuf_size / 8.0 / 1024.0))
+        self.logger.debug("\tTotal Area                  : {0:>8.2f} mm^2".format(wbuf_area))
+        self.logger.debug("\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(wbuf_leak_power))
+        self.logger.debug("\tRead Energy                 : {0:>8.4f} pJ/bit".format(wbuf_read_energy * 1.0e3))
+        self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(wbuf_write_energy * 1.0e3))
+        
         ##################################################
         cfg_dict = {
             "size (bytes)": ibuf_bank_size / 8.0,
             "block size (bytes)": ibuf_bits / 8.0,
             "read-write port": 0,
         }
+        # ibuf_area
         ibuf_data = self.sram_obj.get_data_clean(cfg_dict)
         ibuf_read_energy = float(ibuf_data["read_energy_nJ"]) / ibuf_bits
         ibuf_write_energy = float(ibuf_data["write_energy_nJ"]) / ibuf_bits
@@ -238,37 +225,20 @@ class Simulator(object):
 
         self.logger.debug("IBUF :")
         self.logger.debug("\tBanks                       : {0:>8}".format(ibuf_bank))
-        self.logger.debug(
-            "\tBitWidth                    : {0:>8} bits".format(ibuf_bits)
-        )
+        self.logger.debug("\tBitWidth                    : {0:>8} bits".format(ibuf_bits))
         self.logger.debug("\tWords                       : {0:>8}".format(ibuf_word))
-        self.logger.debug(
-            "\tTotal Size                  : {0:>8} kBytes".format(
-                ibuf_size / 8.0 / 1024.0
-            )
-        )
-        self.logger.debug(
-            "\tTotal Area                  : {0:>8.2f} mm^2".format(ibuf_area)
-        )
-        self.logger.debug(
-            "\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(ibuf_leak_power)
-        )
-        self.logger.debug(
-            "\tRead Energy                 : {0:>8.4f} pJ/bit".format(
-                ibuf_read_energy * 1.0e3
-            )
-        )
-        self.logger.debug(
-            "\tWrite Energy                : {0:>8.4f} pJ/bit".format(
-                ibuf_write_energy * 1.0e3
-            )
-        )
+        self.logger.debug("\tTotal Size                  : {0:>8} kBytes".format(ibuf_size / 8.0 / 1024.0))
+        self.logger.debug("\tTotal Area                  : {0:>8.2f} mm^2".format(ibuf_area))
+        self.logger.debug("\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(ibuf_leak_power))
+        self.logger.debug("\tRead Energy                 : {0:>8.4f} pJ/bit".format(ibuf_read_energy * 1.0e3))
+        self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(ibuf_write_energy * 1.0e3))
         ##################################################
         cfg_dict = {
             "size (bytes)": obuf_bank_size / 8.0,
             "block size (bytes)": obuf_bits / 8.0,
             "read-write port": 1,
         }
+        # obuf_area
         obuf_data = self.sram_obj.get_data_clean(cfg_dict)
         obuf_read_energy = float(obuf_data["read_energy_nJ"]) / obuf_bits
         obuf_write_energy = float(obuf_data["write_energy_nJ"]) / obuf_bits
@@ -277,32 +247,16 @@ class Simulator(object):
 
         self.logger.debug("OBUF :")
         self.logger.debug("\tBanks                       : {0:>8}".format(obuf_bank))
-        self.logger.debug(
-            "\tBitWidth                    : {0:>8} bits".format(obuf_bits)
-        )
+        self.logger.debug("\tBitWidth                    : {0:>8} bits".format(obuf_bits))
         self.logger.debug("\tWords                       : {0:>8}".format(obuf_word))
-        self.logger.debug(
-            "\tTotal Size                  : {0:>8} kBytes".format(
-                obuf_size / 8.0 / 1024.0
-            )
-        )
-        self.logger.debug(
-            "\tTotal Area                  : {0:>8.2f} mm^2".format(obuf_area)
-        )
-        self.logger.debug(
-            "\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(obuf_leak_power)
-        )
-        self.logger.debug(
-            "\tRead Energy                 : {0:>8.4f} pJ/bit".format(
-                obuf_read_energy * 1.0e3
-            )
-        )
-        self.logger.debug(
-            "\tWrite Energy                : {0:>8.4f} pJ/bit".format(
-                obuf_write_energy * 1.0e3
-            )
-        )
+        self.logger.debug("\tTotal Size                  : {0:>8} kBytes".format(obuf_size / 8.0 / 1024.0))
+        self.logger.debug("\tTotal Area                  : {0:>8.2f} mm^2".format(obuf_area))
+        self.logger.debug("\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(obuf_leak_power))
+        self.logger.debug("\tRead Energy                 : {0:>8.4f} pJ/bit".format(obuf_read_energy * 1.0e3))
+        self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(obuf_write_energy * 1.0e3))
         ##################################################
+        
+        # core_area
         # Get stats for systolic array
         core_csv = os.path.join("./results", "systolic_array_synth.csv")
         core_synth_data = pandas.read_csv(core_csv)
@@ -312,6 +266,7 @@ class Simulator(object):
         lookup_dict["Min Precision (bits)"] = pmin
         lookup_dict["N"] = N
         lookup_dict["M"] = M
+        
         core_data = lookup_pandas_dataframe(core_synth_data, lookup_dict)
         if len(core_data) == 0:
             lookup_dict["N"] = 4
@@ -329,15 +284,12 @@ class Simulator(object):
             core_dyn_energy = core_dyn_power / float(core_data["Frequency"])
             core_leak_power = float(core_data["Leakage Power (nW)"])
             core_leak_energy = core_leak_power / float(core_data["Frequency"])
+
         self.logger.debug("Core :")
-        self.logger.debug(
-            "\tDimensions              : {0}x{1}-systolic array".format(N, M)
-        )
+        self.logger.debug("\tDimensions              : {0}x{1}-systolic array".format(N, M))
         self.logger.debug("\tMax-Precision           : {}".format(pmax))
         self.logger.debug("\tMin-Precision           : {}".format(pmin))
-        self.logger.debug(
-            "\tLeak power              : {} (nW)".format(core_leak_energy)
-        )
+        self.logger.debug("\tLeak power              : {} (nW)".format(core_leak_energy))
         self.logger.debug("\tDynamic Energy (nJ)     : {}".format(core_dyn_energy))
         self.logger.debug("\tArea (mm^2)             : {}".format(core_area))
         ##################################################
@@ -437,31 +389,13 @@ class Simulator(object):
 
         self.logger.debug("WBUF :")
         self.logger.debug("\tBanks                       : {0:>8}".format(wbuf_bank))
-        self.logger.debug(
-            "\tBitWidth                    : {0:>8} bits".format(wbuf_bits)
-        )
+        self.logger.debug("\tBitWidth                    : {0:>8} bits".format(wbuf_bits))
         self.logger.debug("\tWords                       : {0:>8}".format(wbuf_word))
-        self.logger.debug(
-            "\tTotal Size                  : {0:>8} kBytes".format(
-                wbuf_size / 8.0 / 1024.0
-            )
-        )
-        self.logger.debug(
-            "\tTotal Area                  : {0:>8.2f} mm^2".format(wbuf_area)
-        )
-        self.logger.debug(
-            "\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(wbuf_leak_power)
-        )
-        self.logger.debug(
-            "\tRead Energy                 : {0:>8.4f} pJ/bit".format(
-                wbuf_read_energy * 1.0e3
-            )
-        )
-        self.logger.debug(
-            "\tWrite Energy                : {0:>8.4f} pJ/bit".format(
-                wbuf_write_energy * 1.0e3
-            )
-        )
+        self.logger.debug("\tTotal Size                  : {0:>8} kBytes".format(wbuf_size / 8.0 / 1024.0))
+        self.logger.debug("\tTotal Area                  : {0:>8.2f} mm^2".format(wbuf_area))
+        self.logger.debug("\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(wbuf_leak_power))
+        self.logger.debug("\tRead Energy                 : {0:>8.4f} pJ/bit".format(wbuf_read_energy * 1.0e3))
+        self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(wbuf_write_energy * 1.0e3))
         ##################################################
 
         # 原始
@@ -482,31 +416,13 @@ class Simulator(object):
 
         self.logger.debug("IBUF :")
         self.logger.debug("\tBanks                       : {0:>8}".format(ibuf_bank))
-        self.logger.debug(
-            "\tBitWidth                    : {0:>8} bits".format(ibuf_bits)
-        )
+        self.logger.debug("\tBitWidth                    : {0:>8} bits".format(ibuf_bits))
         self.logger.debug("\tWords                       : {0:>8}".format(ibuf_word))
-        self.logger.debug(
-            "\tTotal Size                  : {0:>8} kBytes".format(
-                ibuf_size / 8.0 / 1024.0
-            )
-        )
-        self.logger.debug(
-            "\tTotal Area                  : {0:>8.2f} mm^2".format(ibuf_area)
-        )
-        self.logger.debug(
-            "\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(ibuf_leak_power)
-        )
-        self.logger.debug(
-            "\tRead Energy                 : {0:>8.4f} pJ/bit".format(
-                ibuf_read_energy * 1.0e3
-            )
-        )
-        self.logger.debug(
-            "\tWrite Energy                : {0:>8.4f} pJ/bit".format(
-                ibuf_write_energy * 1.0e3
-            )
-        )
+        self.logger.debug("\tTotal Size                  : {0:>8} kBytes".format(ibuf_size / 8.0 / 1024.0))
+        self.logger.debug("\tTotal Area                  : {0:>8.2f} mm^2".format(ibuf_area))
+        self.logger.debug("\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(ibuf_leak_power))
+        self.logger.debug("\tRead Energy                 : {0:>8.4f} pJ/bit".format(ibuf_read_energy * 1.0e3))
+        self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(ibuf_write_energy * 1.0e3))
         ##################################################
 
         cfg_dict = {
@@ -523,31 +439,13 @@ class Simulator(object):
 
         self.logger.debug("OBUF :")
         self.logger.debug("\tBanks                       : {0:>8}".format(obuf_bank))
-        self.logger.debug(
-            "\tBitWidth                    : {0:>8} bits".format(obuf_bits)
-        )
+        self.logger.debug("\tBitWidth                    : {0:>8} bits".format(obuf_bits))
         self.logger.debug("\tWords                       : {0:>8}".format(obuf_word))
-        self.logger.debug(
-            "\tTotal Size                  : {0:>8} kBytes".format(
-                obuf_size / 8.0 / 1024.0
-            )
-        )
-        self.logger.debug(
-            "\tTotal Area                  : {0:>8.2f} mm^2".format(obuf_area)
-        )
-        self.logger.debug(
-            "\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(obuf_leak_power)
-        )
-        self.logger.debug(
-            "\tRead Energy                 : {0:>8.4f} pJ/bit".format(
-                obuf_read_energy * 1.0e3
-            )
-        )
-        self.logger.debug(
-            "\tWrite Energy                : {0:>8.4f} pJ/bit".format(
-                obuf_write_energy * 1.0e3
-            )
-        )
+        self.logger.debug("\tTotal Size                  : {0:>8} kBytes".format(obuf_size / 8.0 / 1024.0))
+        self.logger.debug("\tTotal Area                  : {0:>8.2f} mm^2".format(obuf_area))
+        self.logger.debug("\tLeak Energy (per clock)     : {0:>8.4f} mWatt".format(obuf_leak_power))
+        self.logger.debug("\tRead Energy                 : {0:>8.4f} pJ/bit".format(obuf_read_energy * 1.0e3))
+        self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(obuf_write_energy * 1.0e3))
         ##################################################
         # Get stats for systolic array
 
@@ -563,23 +461,32 @@ class Simulator(object):
         lookup_dict["M"] = M
 
         core_data = lookup_pandas_dataframe(core_synth_data, lookup_dict)
-
-        print(len(core_data))
+        
+        print()
+        print('NM_MAX_MIN_参数适配:',len(core_data))
 
         if len(core_data) == 0:
+
             lookup_dict["N"] = 4
             lookup_dict["M"] = 4
             # 把长宽修正到4 4,最大最小精度还是得符合CSV文件
             core_data = lookup_pandas_dataframe(core_synth_data, lookup_dict)
-            print("lookup_dict", lookup_dict)
+
+            # 16 & 32被修正成了4 4
+
+            print("修正后,lookup_dict", lookup_dict)
+            print()
+
             # 过个断言,csv文件定死了最大最小精度
             assert len(core_data) == 1
 
+            # 按照倍数进行计算 (N*M)/(4*4)
             core_area = float(core_data["Area (um^2)"]) * 1.0e-6 * (N * M) / 16.0
             core_dyn_power = float(core_data["Dynamic Power (nW)"]) * (N * M) / 16.0
             core_dyn_energy = core_dyn_power / float(core_data["Frequency"])
             core_leak_power = float(core_data["Leakage Power (nW)"]) * (N * M) / 16.0
             core_leak_energy = core_leak_power / float(core_data["Frequency"])
+
         else:
             core_area = float(core_data["Area (um^2)"]) * 1.0e-6
             core_dyn_power = float(core_data["Dynamic Power (nW)"])
@@ -588,14 +495,10 @@ class Simulator(object):
             core_leak_energy = core_leak_power / float(core_data["Frequency"])
 
         self.logger.debug("Core :")
-        self.logger.debug(
-            "\tDimensions              : {0}x{1}-systolic array".format(N, M)
-        )
+        self.logger.debug("\tDimensions              : {0}x{1}-systolic array".format(N, M))
         self.logger.debug("\tMax-Precision           : {}".format(pmax))
         self.logger.debug("\tMin-Precision           : {}".format(pmin))
-        self.logger.debug(
-            "\tLeak power              : {} (nW)".format(core_leak_energy)
-        )
+        self.logger.debug("\tLeak power              : {} (nW)".format(core_leak_energy))
         self.logger.debug("\tDynamic Energy (nJ)     : {}".format(core_dyn_energy))
         self.logger.debug("\tArea (mm^2)             : {}".format(core_area))
         ##################################################
@@ -687,6 +590,8 @@ class Simulator(object):
             Tiling and Ordering parameters
         """
 
+        # print('im2col',im2col)
+
         B = batch_size
 
         # 输入数据大小
@@ -696,6 +601,7 @@ class Simulator(object):
         # time
         # 以2为底O的对数
         # 分模块？？
+        
         num_O_tiles = int(math.ceil(log2(O))) + 1
 
         num_IC_tiles = int(math.ceil(log2(IC))) + 1
@@ -739,7 +645,7 @@ class Simulator(object):
 
         # TODO 分配相关？？
         # 具体优化细节
-        
+
         best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
         # best_instructions 操作
 
@@ -760,8 +666,6 @@ class Simulator(object):
         dram_writes = stats.writes["dram"]
         # 看cycle
         best_cycles = stats.total_cycles
-
-        
 
         num_ops = O * O * K * K * IC * OC * B
 
@@ -817,6 +721,8 @@ class Simulator(object):
             # I/O: image宽高
             # IC: 输入通道
 
+            # op.data <- from i=get_tensor()
+
             B, I, _, IC = op.data.shape
             # print("op.data.shape", op.data.shape)
 
@@ -835,13 +741,18 @@ class Simulator(object):
             iprec = op.data.dtype.bits
             wprec = op.weights.dtype.bits
 
-            if op.data.op is None:
-                im2col = True  # im2col for first layer
-            else:
-                im2col = False
+            # print("op.data.op", op.data.op)
 
-            # im2col = True
-            
+            # 这个判断实际上没有起作用,op.data.op就不存在 or 人家使用的dataware和我们的不同
+            # 单纯做了个标记
+            # 全部用im2col
+            # if op.data.op is None:
+            #     im2col = True  # im2col for first layer
+            # else:
+            #     im2col = False
+
+            im2col = True
+
             return self.get_conv_cycles(K, O, S, IC, OC, iprec, wprec, B, im2col)
 
         elif isinstance(op, MatMul):

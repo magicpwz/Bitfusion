@@ -69,6 +69,7 @@ class Graph(object):
         t = Tensor(shape, name, data, dtype, trainable)
         self.tensor_registry[name] = t
         self.logger.debug('Created tensor {}'.format(t.__str__()))
+        
         return t
 
     def register_tensor(self, t):
