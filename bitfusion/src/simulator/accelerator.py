@@ -103,7 +103,8 @@ class Accelerator(object):
             compute_cycles = (
                 batch
                 * ceil_a_by_b(no, self.M)
-                * (#这个加个选择，就可以实现内部动态精度调配
+                * (
+                    # 这个加个选择，就可以实现内部动态精度调配
                     ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec, wprec))
                     + overhead
                 )
