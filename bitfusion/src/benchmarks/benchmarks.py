@@ -187,7 +187,9 @@ def get_alex_net():
     """
     g = Graph("AlexNet", dataset="imagenet", log_level=logging.INFO)
 
-    batch_size = 16
+    # batch_size = 16
+    # for test set to 1
+    batch_size = 1
 
     with g.as_default():
         with g.name_scope("inputs"):

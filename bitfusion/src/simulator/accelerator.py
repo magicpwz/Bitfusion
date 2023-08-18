@@ -110,6 +110,7 @@ class Accelerator(object):
                 )
             )
 
+            
             # ant
             # compute_cycles = batch * ceil_a_by_b(no, self.M * self.get_perf_factor(wprec)) * \
             #         (ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec)))

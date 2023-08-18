@@ -324,11 +324,13 @@ class Simulator(object):
         # 默认bitfusion是32
         # 精度的影响？？
 
-        # wbuf_bits = (pmax * pmax / pmin)
-        # ibuf_bits = (pmax * pmax / pmin)
+        # 8 2可以
+        # 8 4如果不行就使用 32 32  
+        wbuf_bits = (pmax * pmax / pmin)
+        ibuf_bits = (pmax * pmax / pmin)
 
-        wbuf_bits = 32
-        ibuf_bits = 32
+        # wbuf_bits = 32
+        # ibuf_bits = 32
 
         obuf_bits = 32
 
@@ -368,6 +370,11 @@ class Simulator(object):
             "block size (bytes)": wbuf_bits / 8.0,
             "read-write port": 0,
         }
+        # cfg_dict = {
+        #     "size (bytes)": wbuf_bank_size / 8.0,
+        #     "block size (bytes)": wbuf_bits / 8.0,
+        #     "read-write port": 1,
+        # }
 
         # 测试数据
         # cfg_dict = {'size (bytes)': wbuf_bank_size /8., 'block size (bytes)': wbuf_bits/2., 'read-write port': 0}
@@ -425,11 +432,20 @@ class Simulator(object):
         self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(ibuf_write_energy * 1.0e3))
         ##################################################
 
+        # old_未经过修改 use to 16*32
+        # cfg_dict = {
+        #     "size (bytes)": obuf_bank_size / 8.0,
+        #     "block size (bytes)": obuf_bits / 8.0,
+        #     "read-write port": 1,
+        # }
+
         cfg_dict = {
             "size (bytes)": obuf_bank_size / 8.0,
             "block size (bytes)": obuf_bits / 8.0,
-            "read-write port": 1,
+            "read-write port": 0,
         }
+
+        print("cfg_dict_obuf", cfg_dict)
 
         obuf_data = self.sram_obj.get_data_clean(cfg_dict)
         obuf_read_energy = float(obuf_data["read_energy_nJ"]) / obuf_bits
@@ -617,10 +633,12 @@ class Simulator(object):
         self.logger.debug("Number of OC Tiles: {}".format(num_OC_tiles))
         self.logger.debug("Number of B Tiles: {}".format(num_B_tiles))
 
-        # print("Number of O Tiles: {}".format(num_O_tiles))
-        # print("Number of IC Tiles: {}".format(num_IC_tiles))
-        # print("Number of OC Tiles: {}".format(num_OC_tiles))
-        # print("Number of B Tiles: {}".format(num_B_tiles))
+        # if( K == 1 and O == 1 and S == 1  ):
+        #     print("Number of O Tiles: {}".format(num_O_tiles))
+        #     print("Number of IC Tiles: {}".format(num_IC_tiles))
+        #     print("Number of OC Tiles: {}".format(num_OC_tiles))
+        #     print("Number of B Tiles: {}".format(num_B_tiles))
+        #     sys.exit()
 
         # sys.exit()
         best_instructions_dict = {}
@@ -666,6 +684,35 @@ class Simulator(object):
         dram_writes = stats.writes["dram"]
         # 看cycle
         best_cycles = stats.total_cycles
+
+
+
+        #fc层测试
+        if( K == 1 and O == 1 and S == 1  ):
+            print('cycle',best_cycles)
+            # 优化后的参数
+            
+            num_b, b = best_tiling["B/b"]
+            num_ow, ow = best_tiling["OW/ow"]
+            num_oh, oh = best_tiling["OH/oh"]
+            num_ic, ic = best_tiling["IC/ic"]
+            num_oc, oc = best_tiling["OC/oc"]
+            # 优化后的tiling
+            num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
+            # print('num_b * num_ow * num_oh * num_ic * num_oc',
+                #   num_b , num_ow , num_oh , num_ic , num_oc)
+            
+            kw = kh = K
+            print('num_tiles',num_tiles)
+            print('stats.mem_stall_cycles',stats.mem_stall_cycles)
+            print('stats.compute_cycles',best_cycles - stats.mem_stall_cycles)
+            print('acc_cycle',(best_cycles - stats.mem_stall_cycles)/num_tiles)
+
+
+            print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
+
+            sys.exit()
+        
 
         num_ops = O * O * K * K * IC * OC * B
 
@@ -758,6 +805,14 @@ class Simulator(object):
         elif isinstance(op, MatMul):
             B = op.data.shape[0]
             OC, IC = op.weights.shape
+
+
+            # print('IC_for_FC',IC)
+            # print('B_for_FC',B)
+            # print('OC_for_FC',OC)
+
+            # sys.exit()
+
             iprec = op.data.dtype.bits
             wprec = op.weights.dtype.bits
             return self.get_FC_cycles(IC, OC, iprec, wprec, batch_size=B)

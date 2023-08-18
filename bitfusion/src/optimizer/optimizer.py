@@ -229,6 +229,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     
     # 和精度无关的类似定值
     num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
+
     # print('num_b',num_b)
     # print('num_ow',num_ow)
     # print('num_oh',num_oh)
@@ -292,6 +293,13 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     stats.total_cycles = compute_cycles + memory_stalls
     
+    # 拿fc第一层的数据
+    # print('stats.total_cycles',stats.total_cycles)
+
+    # if stats.total_cycles == 78800:
+    #     print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
+    #     sys.exit()
+
     stats.mem_stall_cycles = memory_stalls
 
     if verbose:
@@ -580,16 +588,21 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
     best_tiling = None
 
     for _b in range(num_B_tiles):
+
+        # 1 << _b 左移_b位 
         b = min(1 << _b, B)
         num_b = ceil_a_by_b(B, b)
 
         for _o in range(num_O_tiles):
+            # 位运算取最小值
             ow = min(1 << _o, O)
             oh = ow
+            
             num_ow = ceil_a_by_b(O, ow)
             num_oh = ceil_a_by_b(O, oh)
 
             for _ic in range(num_IC_tiles):
+
                 ic = min(1 << _ic, IC)
                 num_ic = ceil_a_by_b(IC, ic)
 
