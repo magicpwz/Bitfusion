@@ -68,7 +68,7 @@ class SimulatorSweep(object):
         """
         Sweep the parameters of the accelerator
         """
-
+        # 设置参数
         if list_n is None:
             list_n = [sim_obj.accelerator.N]
         if list_m is None:
@@ -136,6 +136,8 @@ class SimulatorSweep(object):
                                                 lookup_dict["OBUF Size (bits)"] = obuf
                                                 lookup_dict["IBUF Size (bits)"] = ibuf
                                                 lookup_dict["Batch size"] = batch_size
+
+                                                # 具体计算操作
                                                 results = lookup_pandas_dataframe(
                                                     self.sweep_df, lookup_dict
                                                 )
@@ -183,6 +185,7 @@ class SimulatorSweep(object):
                                                     )
 
                                                     # 网络结构在仿真上的一些操作
+                                                    
                                                     stats = (
                                                         benchmarks.get_bench_numbers(
                                                             nn, sim_obj, batch_size
@@ -194,8 +197,10 @@ class SimulatorSweep(object):
                                                     # print("stats", type(stats))
                                                     # sys.exit()
                                                     #  <bitfusion.src.simulator.stats.Stats object at 0x7f5d1cbb0190>
-
+                                                    
+                                                    #  memory 计算 
                                                     for layer in stats:
+
                                                         cycles = stats[
                                                             layer
                                                         ].total_cycles

@@ -672,16 +672,21 @@ class Simulator(object):
         # 这三个参数不是很懂
         print("best_instructions", best_instructions)
         print("best_tiling", best_tiling)
+        # best_order: ('B/b', 'OC/oc', 'OW/ow', 'IC/ic', 'OH/oh')
         print("best_order", best_order)
+
+
 
         # sys.exit()
 
+        # 每一层的内存读写！！
         act_reads = stats.reads["act"]
         wgt_reads = stats.reads["wgt"]
         out_reads = stats.reads["out"]
         dram_reads = stats.reads["dram"]
         out_writes = stats.writes["out"]
         dram_writes = stats.writes["dram"]
+
         # 看cycle
         best_cycles = stats.total_cycles
 

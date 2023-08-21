@@ -17,6 +17,7 @@ class Accelerator(object):
         self.sram = sram
 
         # 内存带宽？
+        # 参数 in ini
         self.mem_if_width = mem_if_width
 
         self.frequency = frequency
@@ -124,6 +125,8 @@ class Accelerator(object):
                 * kw
                 * kh
                 * (
+                    # 类似整体模块资源划分函数 
+                    # TODO 进行计算资源划分修改
                     ceil_a_by_b(ic, self.N * self.get_perf_factor(iprec, wprec))
                     + overhead
                 )

@@ -48,11 +48,17 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     kw = kh = K
 
-    # 这个参数是什么含义？？？
+    # 这个参数是什么含义 -- 一个大的Fusion Unit 分成多少个小块 (后续的精度选择操作可以在这个上面做文章)
+    # 精度设置选择
+    # 后续内存读写和这个也有关系
     perf_factor = acc_obj.get_perf_factor(iprec, wprec)
 
+    # key-value
     writes = {}
     reads = {}
+
+    # 初始化，预设一个标准单元值
+    # 实际值：单元 * 后续tiling
 
     if im2col:
         writes["wgt"] = (
@@ -71,6 +77,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             * oc
             * wprec
         )  # ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * \
+
     if im2col:
         writes["act"] = (
             ow * oh * K * K * ic * b * iprec
@@ -105,6 +112,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             print("out overflow")
             print(b, ow, oh, ic, oc)
         overflow = True
+    
+    # 判断资源是否够用
     if overflow:
         # sys.exit()
         if verbose:
@@ -113,35 +122,48 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             print("Output size: {} bytes".format(writes["out"] / 8.0))
         return
 
+    # 定上限
     max_write_size = {}
     max_read_size = {}
+
     for namespace in writes:
         max_write_size[namespace] = writes[namespace]
     for namespace in reads:
         max_read_size[namespace] = reads[namespace]
+
+
 
     # 首先是循环块的优化
     # First the loop block optimizations
     stats = Stats()
     write_promote = {"wgt": True, "act": True, "out": True}
     read_promote = {"out": True}
+    
     if verbose:
         logger.debug("Initialize reads/writes")
-        logger.debug("\tim2col: {}".format(im2col))
-        logger.debug("\tTiling: {}".format(tiling))
-        logger.debug("\tReads : {}".format(reads))
-        logger.debug("\tWrites: {}".format(writes))
+        logger.debug("\t im2col: {}".format(im2col))
+        logger.debug("\t Tiling: {}".format(tiling))
+        logger.debug("\t Reads : {}".format(reads))
+        logger.debug("\t Writes: {}".format(writes))
+
+    # reversed(order_type) 反转迭代器
+    # such as order_type: ('B/b', 'OC/oc', 'OW/ow', 'IC/ic', 'OH/oh')
+    # loop = [OH/oh,IC/ic,OW/ow,OC/oc,B/b]
 
     for loop in reversed(order_type):
         # besttiling -> tiling[loop]
         num_tiles, tile_size = tiling[loop]
+        
+        # 写
         # promote all writes
         for namespace in writes:
-            # promote is true
+            # promote is true 过验证
             if write_promote[namespace]:
                 # If tile loop depends on the namespace index, make the read size larger
                 if tile_deps[loop][namespace]:
+                    # 倍数计算
                     writes[namespace] *= num_tiles
+                    
                     # If tile size is larger than the SRAM, set promote to False
                     if writes[namespace] > acc_obj.sram[namespace] * 8.0 / 2:
                         write_promote[namespace] = False
@@ -149,7 +171,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
                         max_write_size[namespace] = writes[namespace]
             else:
                 writes[namespace] *= num_tiles
-
+        
+        # 读
         # promote all reads
         for namespace in reads:
             # promote is true
@@ -175,6 +198,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             logger.debug("\tReads : {}".format(reads))
             logger.debug("\tWrites: {}".format(writes))
 
+    # 赋值传参
     for namespace in writes:
         stats.writes[namespace] = writes[namespace]
         stats.reads["dram"] += writes[namespace]
@@ -182,6 +206,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         stats.reads[namespace] = reads[namespace]
         stats.writes["dram"] += reads[namespace]
 
+    # 和精度有关!!
     # 层内优化
     # Next the inner loop optimizations
     if im2col:
@@ -189,6 +214,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         # (os_loop: ic x kh x kw): Wgt: True, Out: False, Act: True
         # (ws_loop: b x oh x ow): Wgt: False, Out: True, Act: True
         # (is_loop: oc): Wgt: True, Out: True, Act: False
+
         is_loop = ceil_a_by_b(oc, acc_obj.M) * acc_obj.M
         os_loop = (
             ceil_a_by_b(ic * kh * kw, acc_obj.N * acc_obj.get_perf_factor(iprec, wprec))
@@ -205,6 +231,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         # Weight Stationary energy
         # kw * kh * ic * oc -> b * ow * oh
         ws_energy = (os_loop * is_loop) * (wprec + ws_loop * (iprec + oprec))
+
     else:
         is_loop = ceil_a_by_b(oc, acc_obj.M) * acc_obj.M
         os_loop = (
@@ -268,6 +295,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         initial_dram_reads += max_write_size[namespace]
     for namespace in max_read_size:
         final_dram_writes += max_read_size[namespace]
+
     latency = acc_obj.get_mem_read_cycles(
         "dram", initial_dram_reads
     ) + acc_obj.get_mem_write_cycles("dram", final_dram_writes)

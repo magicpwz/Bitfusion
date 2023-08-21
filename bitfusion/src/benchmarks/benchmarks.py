@@ -165,7 +165,7 @@ def get_bench_numbers(graph, sim_obj, batch_size=1):
         # sys.exit()
 
         out = sim_obj.get_cycles(op, batch_size)
-
+        
         # print('out',out)
         # sys.exit()
 
