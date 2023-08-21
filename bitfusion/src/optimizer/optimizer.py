@@ -48,6 +48,10 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     kw = kh = K
 
+    # TODO 
+    # Q1:
+
+
     # 这个参数是什么含义 -- 一个大的Fusion Unit 分成多少个小块 (后续的精度选择操作可以在这个上面做文章)
     # 精度设置选择
     # 后续内存读写和这个也有关系
@@ -79,6 +83,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         )  # ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * \
 
     if im2col:
+        # 后续的iprec & wprec是否可以换算成一个平均精度
         writes["act"] = (
             ow * oh * K * K * ic * b * iprec
         )  # ceil_a_by_b(K * K * ic, acc_obj.N * perf_factor) * acc_obj.N * perf_factor * \
@@ -89,6 +94,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         writes["act"] = iw * ih * ic * b * iprec
 
     oprec = 32
+
     writes["out"] = ow * oh * ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * b * oprec
     reads["out"] = ow * oh * ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * b * oprec
 
