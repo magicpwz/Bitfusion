@@ -113,3 +113,5 @@ area_stats = bf_e_sim.get_area()
 print('area_stats',area_stats)
 
 #此时已经得到了Bit Fusion的 能耗+Benchmarks的次数+面积
+
+
