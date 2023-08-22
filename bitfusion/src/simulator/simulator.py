@@ -233,11 +233,21 @@ class Simulator(object):
         self.logger.debug("\tRead Energy                 : {0:>8.4f} pJ/bit".format(ibuf_read_energy * 1.0e3))
         self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(ibuf_write_energy * 1.0e3))
         ##################################################
+        
+        # cfg_dict = {
+        #     "size (bytes)": obuf_bank_size / 8.0,
+        #     "block size (bytes)": obuf_bits / 8.0,
+        #     "read-write port": 1,
+        # }
+
         cfg_dict = {
             "size (bytes)": obuf_bank_size / 8.0,
             "block size (bytes)": obuf_bits / 8.0,
-            "read-write port": 1,
+            "read-write port": 0,
         }
+
+        # import ipdb;ipdb.set_trace()
+
         # obuf_area
         obuf_data = self.sram_obj.get_data_clean(cfg_dict)
         obuf_read_energy = float(obuf_data["read_energy_nJ"]) / obuf_bits
@@ -664,10 +674,10 @@ class Simulator(object):
         # TODO 分配相关？？
         # 具体优化细节
 
-        best_instructions, best_tiling, best_order = optimize_for_order(conv_params)
+        best_instructions, best_tiling, best_order = optimize_for_order(conv_params) # 找到最优的 tiling 和 order 的策略
         # best_instructions 操作
 
-        stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False)
+        stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False) # 根据相应的 调度策略来得到最终的结果
 
         # 这三个参数不是很懂
         print("best_instructions", best_instructions)
@@ -716,10 +726,11 @@ class Simulator(object):
 
             print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
 
-            sys.exit()
+            # sys.exit() 
+            # 为什么这里会有 sys.exit() 直接退出系统了，那后续的就不会执行了？ 
         
 
-        num_ops = O * O * K * K * IC * OC * B
+        num_ops = O * O * K * K * IC * OC * B # IC input-channel  OC: output-channel O: output width/length K: input width/length B: batch-size 
 
         # self.logger.debug('Best Operations: {}'.format(best_operations))
 

@@ -22,9 +22,6 @@ from dnnweaver2 import get_tensor
 import logging
 from dnnweaver2.scalar.dtypes import FQDtype, FixedPoint
 
-
-import bitfusion.src.benchmarks.bitfusion_bench as bit
-
 import os
 
 
@@ -98,144 +95,19 @@ def conv(
     return act
 
 
-
-def get_precision(precision):
-    if precision == 16:
-        return FQDtype.FXP16
-    if precision == 8:
-        return FQDtype.FXP8
-    if precision == 4:
-        return FQDtype.FXP4
-    if precision == 6:
-        return FQDtype.FXP6
-
-
-# 网络构建通用函数
-def create_net(net_name, net_list, batch_size):
-    g = Graph(net_name, dataset="imagenet", log_level=logging.INFO)
-
-    # 单层的操作
-    with g.as_default():
-        for idx, op in enumerate(net_list):
-            # precision输入值
-            (
-                input_size,
-                kernel_size,
-                output_size,
-                kernel_stride,
-                padding,
-                precision,
-                op_type,
-            ) = op
-            
-            input_size[0] = input_size[0] * batch_size
-            output_size[0] = output_size[0] * batch_size
-
-            precision = get_precision(precision)
-
-            if op_type == 0:
-                with g.name_scope("conv" + str(idx)):
-                    out = create_conv(
-                        input_size,
-                        kernel_size,
-                        stride_size=kernel_stride,
-                        pad=padding,
-                        c_dtype=FQDtype.FXP16,
-                        w_dtype=precision,
-                    )
-                    # print(idx, op, out.shape)
-                    assert out.shape[0] == output_size[0]
-                    assert out.shape[1] == output_size[2]
-                    assert out.shape[2] == output_size[3]
-                    assert out.shape[3] == output_size[1]
-            else:
-                with g.name_scope("fc" + str(idx)):
-                    out = create_fc(
-                        input_size, kernel_size, c_dtype=precision, w_dtype=precision
-                    )
-                    # print(idx, op, out.shape)
-                    assert out.shape[0] == output_size[0]
-                    assert out.shape[1] == output_size[1]
-    return g
-
-
-def create_conv(
-    input_size, weight_size, stride_size=None, pad=None, c_dtype=None, w_dtype=None
-):
-    if stride_size is None:
-        stride = (1, 1, 1, 1)
-    else:
-        stride = (1, stride_size[0], stride_size[1], 1)
-
-    batch_size = input_size[0]
-    output_channels = weight_size[0]
-    input_channels = weight_size[1]
-    kernel_size = (weight_size[2], weight_size[3])
-
-    input = get_tensor(
-        shape=(batch_size, input_size[2], input_size[3], input_size[1]),
-        name="data",
-        dtype=w_dtype,
-        trainable=False,
-    )
-    weights = get_tensor(
-        shape=(output_channels, kernel_size[0], kernel_size[1], input_channels),
-        name="weights",
-        dtype=w_dtype,
-    )
-    biases = get_tensor(shape=(output_channels), name="biases", dtype=c_dtype)
-    _conv = conv2D(input, weights, biases, stride=stride, pad=pad, dtype=c_dtype)
-    return _conv
-
-
-def create_fc(input_size, weight_size, c_dtype=None, w_dtype=None):
-    batch_size = input_size[0]
-    output_channels = weight_size[0]
-    input_channels = weight_size[1]
-
-    input = get_tensor(
-        shape=(batch_size, input_size[1]), name="data", dtype=w_dtype, trainable=False
-    )
-    weights = get_tensor(
-        shape=(output_channels, input_channels), name="weights", dtype=w_dtype
-    )
-    biases = get_tensor(shape=(output_channels,), name="biases", dtype=c_dtype)
-    _fc = matmul(input, weights, biases, dtype=c_dtype)
-    return _fc
-
-
-
-# benchlist = [
-#     "AlexNet",
-#     "SVHN",
-#     "CIFAR10",
-#     "LeNet-5",
-#     "VGG-7",
-#     "RESNET-18",
-#     "RNN",
-#     "LSTM",
-# ]
-
 benchlist = [
-    "FC_test",
-    # "inceptionv3",
-    "vit",
-    "rte",
-    "wnli",
-    "mrpc",
-    "cola",
-    "sst_2",
-    "qnli",
-    "qqp",
-    "mnli",
-
+    "AlexNet",
+    "SVHN",
+    "CIFAR10",
+    "LeNet-5",
+    "VGG-7",
+    "RESNET-18",
+    "RNN",
+    "LSTM",
 ]
 
 
 def get_bench_nn(bench_name, WRPN=False):
-
-    batch_size = 1
-
     if bench_name == "AlexNet":
         if WRPN:
             return get_alex_net_wrpn()
@@ -260,29 +132,6 @@ def get_bench_nn(bench_name, WRPN=False):
         return get_RNN("RNN", 2048)
     elif bench_name == "LSTM":
         return get_LSTM("LSTM", 900)
-    elif bench_name == "FC_test":
-        return get_FC_test()
-    
-    elif bench_name == "inceptionv3":
-        return create_net(bench_name, bit.inceptionv3, batch_size)
-    elif bench_name == "vit":
-        return create_net(bench_name, bit.vit, batch_size)
-    elif bench_name == "rte":
-        return create_net(bench_name, bit.rte, batch_size)
-    elif bench_name == "wnli":
-        return create_net(bench_name, bit.wnli, batch_size)
-    elif bench_name == "mrpc":
-        return create_net(bench_name, bit.mrpc, batch_size)
-    elif bench_name == "cola":
-        return create_net(bench_name, bit.cola, batch_size)
-    elif bench_name == "sst_2":
-        return create_net(bench_name, bit.sst_2, batch_size)
-    elif bench_name == "qnli":
-        return create_net(bench_name, bit.qnli, batch_size)
-    elif bench_name == "qqp":
-        return create_net(bench_name, bit.qqp, batch_size)
-    elif bench_name == "mnli":
-        return create_net(bench_name, bit.mnli, batch_size)
 
 
 def write_to_csv(csv_name, fields, stats, graph, csv_path="./"):
@@ -328,36 +177,6 @@ def get_bench_numbers(graph, sim_obj, batch_size=1):
             # print('out_l',l)
 
     return stats
-
-
-def get_FC_test():
-    g = Graph("AlexNet", dataset="imagenet", log_level=logging.INFO)
-    batch_size = 1
-
-    with g.as_default():
-        with g.name_scope("inputs"):
-            i = get_tensor(
-                shape=(batch_size, 227, 227, 3),
-                name="data",
-                dtype=FQDtype.FXP8,
-                trainable=False,
-            )
-        with g.name_scope("fc1"):
-            fc1 = fc(
-                i,
-                output_channels=4096,
-                w_dtype=FQDtype.FXP4,
-                f_dtype=FQDtype.FXP4,
-            )
-        with g.name_scope("fc2"):
-            fc2 = fc(
-                fc1, output_channels=4096, w_dtype=FQDtype.FXP4, f_dtype=FQDtype.FXP8
-            )
-
-        with g.name_scope("fc3"):
-            fc3 = fc(fc2, output_channels=1000, w_dtype=FQDtype.FXP8, f_dtype=None)
-    
-    return g
 
 
 # 网络结构的操作
@@ -539,7 +358,7 @@ def get_alex_net():
             fc3 = fc(fc2, output_channels=1000, w_dtype=FQDtype.FXP8, f_dtype=None)
 
     return g
-    
+
 
 def get_alex_net_wrpn():
     """

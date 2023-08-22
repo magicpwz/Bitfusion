@@ -82,6 +82,7 @@ class SimulatorSweep(object):
         if list_bw is None:
             list_bw = [sim_obj.accelerator.mem_if_width]
 
+        # import ipdb; ipdb.set_trace() 
         if list_bench is None:
             # 设置测试的网络的结构name
             list_bench = benchmarks.benchlist
@@ -278,6 +279,7 @@ def check_pandas_or_run(
     print(config_file)
 
     if len(results) == 0:
+        # import ipdb; ipdb.set_trace() 
         # 一个标准类
         sweep_obj = SimulatorSweep(sim_sweep_csv, config_file)
 

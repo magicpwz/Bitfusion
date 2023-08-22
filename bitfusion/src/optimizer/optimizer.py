@@ -48,6 +48,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     kw = kh = K
 
+    # import ipdb; ipdb.set_trace()
+
     # TODO 
     # Q1:
 
@@ -64,7 +66,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # 初始化，预设一个标准单元值
     # 实际值：单元 * 后续tiling
 
-    if im2col:
+    # 有无资源的溢出，会导致 无法使用 
+    if im2col: # false 
         writes["wgt"] = (
             ceil_a_by_b(K * K * ic, acc_obj.N * perf_factor)
             * acc_obj.N
@@ -205,6 +208,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             logger.debug("\tWrites: {}".format(writes))
 
     # 赋值传参
+    # 与memory_stall有关
     for namespace in writes:
         stats.writes[namespace] = writes[namespace]
         stats.reads["dram"] += writes[namespace]
@@ -239,15 +243,15 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         ws_energy = (os_loop * is_loop) * (wprec + ws_loop * (iprec + oprec))
 
     else:
-        is_loop = ceil_a_by_b(oc, acc_obj.M) * acc_obj.M
+        is_loop = ceil_a_by_b(oc, acc_obj.M) * acc_obj.M # input stationary 
         os_loop = (
             ceil_a_by_b(ic, acc_obj.N * acc_obj.get_perf_factor(iprec, wprec))
             * acc_obj.N
             * acc_obj.get_perf_factor(iprec, wprec)
             * kh
             * kw
-        )
-        ws_loop = b * oh * ow
+        ) # output stationary 
+        ws_loop = b * oh * ow # weight stationary 
         # Input Stationary energy
         # kw * kh * ic * oh * ow * b -> oc
         is_energy = (os_loop * ws_loop) * (iprec + is_loop * (wprec + oprec))
@@ -289,7 +293,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     else:
         if verbose:
             logger.debug("SRAM access order: Weight Stationary")
-        stats.reads["act"] += num_tiles * (kw * kh * ic * oc) * (b * ow * oh) * iprec
+        # 读写 bit 数量
+        stats.reads["act"] += num_tiles * (kw * kh * ic * oc) * (b * ow * oh) * iprec # 假设调度使得所有都对其，那么 iprec 变成 average precision 
         stats.reads["out"] += num_tiles * (kw * kh * ic * oc) * (b * ow * oh) * oprec
         stats.writes["out"] += num_tiles * (kw * kh * ic * oc) * (b * ow * oh) * oprec
         stats.reads["wgt"] += num_tiles * (kw * kh * ic * oc) * wprec
@@ -297,16 +302,22 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # TODO: update
     initial_dram_reads = 0
     final_dram_writes = 0
+
     for namespace in max_write_size:
         initial_dram_reads += max_write_size[namespace]
     for namespace in max_read_size:
         final_dram_writes += max_read_size[namespace]
 
+    # 二者除以带宽之后相加
+    # 流水？？
     latency = acc_obj.get_mem_read_cycles(
         "dram", initial_dram_reads
     ) + acc_obj.get_mem_write_cycles("dram", final_dram_writes)
 
+
     total_dram_accesses = stats.reads["dram"] + stats.writes["dram"]
+    # 减去两头
+    # 不存在调度，之后按顺序输入
     middle_dram_accesses = total_dram_accesses - initial_dram_reads - final_dram_writes
 
     # acc_obj 加速器仿真 accelerator.py
