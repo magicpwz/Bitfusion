@@ -234,17 +234,17 @@ class Simulator(object):
         self.logger.debug("\tWrite Energy                : {0:>8.4f} pJ/bit".format(ibuf_write_energy * 1.0e3))
         ##################################################
         
-        # cfg_dict = {
-        #     "size (bytes)": obuf_bank_size / 8.0,
-        #     "block size (bytes)": obuf_bits / 8.0,
-        #     "read-write port": 1,
-        # }
-
         cfg_dict = {
             "size (bytes)": obuf_bank_size / 8.0,
             "block size (bytes)": obuf_bits / 8.0,
-            "read-write port": 0,
+            "read-write port": 1,
         }
+
+        # cfg_dict = {
+        #     "size (bytes)": obuf_bank_size / 8.0,
+        #     "block size (bytes)": obuf_bits / 8.0,
+        #     "read-write port": 0,
+        # }
 
         # import ipdb;ipdb.set_trace()
 
@@ -449,11 +449,11 @@ class Simulator(object):
         #     "read-write port": 1,
         # }
 
-        cfg_dict = {
-            "size (bytes)": obuf_bank_size / 8.0,
-            "block size (bytes)": obuf_bits / 8.0,
-            "read-write port": 0,
-        }
+        # cfg_dict = {
+        #     "size (bytes)": obuf_bank_size / 8.0,
+        #     "block size (bytes)": obuf_bits / 8.0,
+        #     "read-write port": 0,
+        # }
 
         print("cfg_dict_obuf", cfg_dict)
 
@@ -673,10 +673,12 @@ class Simulator(object):
 
         # TODO 分配相关？？
         # 具体优化细节
+        
 
         best_instructions, best_tiling, best_order = optimize_for_order(conv_params) # 找到最优的 tiling 和 order 的策略
         # best_instructions 操作
 
+        import ipdb; ipdb.set_trace()
         stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False) # 根据相应的 调度策略来得到最终的结果
 
         # 这三个参数不是很懂

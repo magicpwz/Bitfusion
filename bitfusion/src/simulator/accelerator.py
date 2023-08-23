@@ -25,6 +25,7 @@ class Accelerator(object):
         self.pmin = pmin
 
     def get_mem_read_cycles(self, dst, size):
+        
         """
         Read instruction
         args:

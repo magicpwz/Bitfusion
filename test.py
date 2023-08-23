@@ -81,7 +81,7 @@ sim_sweep_columns = ['N', 'M',
         'Batch size']
 
 # bf_e_sim_sweep_csv = os.path.join(results_dir, 'bitfusion-eyeriss-sim-sweep.csv')
-bf_e_sim_sweep_csv = os.path.join(results_dir, 'bitfusion_fc_'
+bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_new_bitfusion_fc_'
                                   + str(config_ini.getint('system','if_width'))+
                                   '_sim_sweep.csv')
 

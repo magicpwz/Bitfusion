@@ -48,6 +48,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     kw = kh = K
 
+    # import ipdb; ipdb.set_trace()
 
     # TODO 
     # Q1:
@@ -58,13 +59,9 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # 后续内存读写和这个也有关系
     perf_factor = acc_obj.get_perf_factor(iprec, wprec)
 
-
-
-
     # key-value
     writes = {}
     reads = {}
-
 
     # 初始化，预设一个标准单元值
     # 实际值：单元 * 后续tiling
@@ -72,14 +69,11 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # 有无资源的溢出，会导致 无法使用 
     if im2col: # false 
         writes["wgt"] = (
-            # 平均一个小块需要处理的数据量*单列的小块个数
-            # 以一列为标准单元
             ceil_a_by_b(K * K * ic, acc_obj.N * perf_factor)
-            * oc
-            * wprec
             * acc_obj.N
             * perf_factor
-            
+            * oc
+            * wprec
         )  # ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * \
     else:
         # TODO: Figure this out
@@ -167,7 +161,6 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     for loop in reversed(order_type):
         # besttiling -> tiling[loop]
-        # 这里的num_tiles是('B/b', 'OC/oc', 'OW/ow', 'IC/ic', 'OH/oh')各自的num_tiles
         num_tiles, tile_size = tiling[loop]
         
         # 写
@@ -178,8 +171,6 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
                 # If tile loop depends on the namespace index, make the read size larger
                 if tile_deps[loop][namespace]:
                     # 倍数计算
-                    # writes[namespace] *= max(num_tiles) in num_tiles_b/o/i/c
-                    
                     writes[namespace] *= num_tiles
                     
                     # If tile size is larger than the SRAM, set promote to False
@@ -197,7 +188,6 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             if read_promote[namespace]:
                 # Tile loop depends on the namespace index
                 if tile_deps[loop][namespace]:
-
                     reads[namespace] *= num_tiles
                     # Tile size is now larger than the SRAM, set promote to False
                     if reads[namespace] > acc_obj.sram[namespace] * 8.0 / 2:
@@ -608,7 +598,7 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
     """
     """
         self.accelerator:这是一个对象的属性或变量,表示卷积操作所使用的加速器。
-        K:这是一个整数,表示卷积核的尺寸或大小。--错误
+        K:这是一个整数,表示卷积核的尺寸或大小。
         O:这是一个整数,表示输出特征图的尺寸或大小。
         S:这是一个整数,表示卷积的步幅或 stride。
         IC:这是一个整数,表示输入通道数或输入特征图的深度。
