@@ -8,7 +8,11 @@ import numpy as np
 from bitfusion.src.utils.utils import ceil_a_by_b, log2, lookup_pandas_dataframe
 from bitfusion.src.simulator.stats import Stats
 from bitfusion.src.simulator.loop_stack import LoopStack
-from bitfusion.src.optimizer.optimizer import optimize_for_order, get_stats_fast
+# old优化函数
+# from bitfusion.src.optimizer.optimizer import optimize_for_order, get_stats_fast
+# new 优化函数
+from bitfusion.src.optimizer.optimizer_test import optimize_for_order, get_stats_fast
+
 from bitfusion.src.simulator.accelerator import Accelerator
 from bitfusion.src.simulator.energy import EnergyTuple
 
@@ -16,6 +20,8 @@ from bitfusion.sram.cacti_sweep import CactiSweep
 import os
 import pandas
 import sys
+import random
+
 
 from dnnweaver2.tensorOps.cnn import Convolution, MatMul
 
@@ -657,6 +663,47 @@ class Simulator(object):
 
         # 输入数据大小 可反推
         # I = (O - 1) * S + K
+
+
+        # old
+        # conv_params = (
+        #     self.accelerator,
+        #     K,
+        #     O,
+        #     S,
+        #     IC,
+        #     OC,
+        #     B,
+        #     iprec,
+        #     wprec,
+        #     im2col,
+        #     self.get_energy_cost(),
+        # )
+
+        # # 固定分配概率
+        # i_low = 0.2
+        # i_mid = 0.6
+        # i_high = 0.2
+
+        # 随机概率 ->针对每一个卷积 or FC 给出一个概率分配方案
+        # 生成三个随机数
+        random1 = random.randint(1,15)
+        random2 = random.randint(1,20)
+        random3 = random.randint(1,5)
+
+        # 计算随机数的和
+        total_sum = random1 + random2 + random3
+
+        # 计算每个变量的值
+        i_low = random1 / total_sum
+        i_mid = random2 / total_sum
+        i_high = random3 / total_sum
+
+        avg_iprec = 2 * i_low + 4 * i_mid + 8 * i_high
+        
+        # 调整之后的输入平均精度
+        iprec = avg_iprec
+
         conv_params = (
             self.accelerator,
             K,
@@ -669,6 +716,9 @@ class Simulator(object):
             wprec,
             im2col,
             self.get_energy_cost(),
+            i_low,
+            i_mid,
+            i_high
         )
 
         # TODO 分配相关？？
@@ -678,8 +728,8 @@ class Simulator(object):
         best_instructions, best_tiling, best_order = optimize_for_order(conv_params) # 找到最优的 tiling 和 order 的策略
         # best_instructions 操作
 
-        import ipdb; ipdb.set_trace()
-        stats = get_stats_fast(conv_params, best_tiling, best_order, verbose=False) # 根据相应的 调度策略来得到最终的结果
+        # import ipdb; ipdb.set_trace()
+        stats = get_stats_fast(conv_params, best_tiling, best_order,verbose=False) # 根据相应的 调度策略来得到最终的结果
 
         # 这三个参数不是很懂
         print("best_instructions", best_instructions)
@@ -687,46 +737,46 @@ class Simulator(object):
         # best_order: ('B/b', 'OC/oc', 'OW/ow', 'IC/ic', 'OH/oh')
         print("best_order", best_order)
 
-
+        # import ipdb; ipdb.set_trace()
 
         # sys.exit()
 
         # 每一层的内存读写！！
-        act_reads = stats.reads["act"]
-        wgt_reads = stats.reads["wgt"]
-        out_reads = stats.reads["out"]
-        dram_reads = stats.reads["dram"]
-        out_writes = stats.writes["out"]
-        dram_writes = stats.writes["dram"]
+        # act_reads = stats.reads["act"]
+        # wgt_reads = stats.reads["wgt"]
+        # out_reads = stats.reads["out"]
+        # dram_reads = stats.reads["dram"]
+        # out_writes = stats.writes["out"]
+        # dram_writes = stats.writes["dram"]
 
         # 看cycle
         best_cycles = stats.total_cycles
 
 
 
-        #fc层测试
-        if( K == 1 and O == 1 and S == 1  ):
-            print('cycle',best_cycles)
-            # 优化后的参数
+        # #fc层测试
+        # if( K == 1 and O == 1 and S == 1  ):
+        #     print('cycle',best_cycles)
+        #     # 优化后的参数
             
-            num_b, b = best_tiling["B/b"]
-            num_ow, ow = best_tiling["OW/ow"]
-            num_oh, oh = best_tiling["OH/oh"]
-            num_ic, ic = best_tiling["IC/ic"]
-            num_oc, oc = best_tiling["OC/oc"]
-            # 优化后的tiling
-            num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
-            # print('num_b * num_ow * num_oh * num_ic * num_oc',
-                #   num_b , num_ow , num_oh , num_ic , num_oc)
+        #     num_b, b = best_tiling["B/b"]
+        #     num_ow, ow = best_tiling["OW/ow"]
+        #     num_oh, oh = best_tiling["OH/oh"]
+        #     num_ic, ic = best_tiling["IC/ic"]
+        #     num_oc, oc = best_tiling["OC/oc"]
+        #     # 优化后的tiling
+        #     num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
+        #     # print('num_b * num_ow * num_oh * num_ic * num_oc',
+        #         #   num_b , num_ow , num_oh , num_ic , num_oc)
             
-            kw = kh = K
-            print('num_tiles',num_tiles)
-            print('stats.mem_stall_cycles',stats.mem_stall_cycles)
-            print('stats.compute_cycles',best_cycles - stats.mem_stall_cycles)
-            print('acc_cycle',(best_cycles - stats.mem_stall_cycles)/num_tiles)
+        #     kw = kh = K
+        #     print('num_tiles',num_tiles)
+        #     print('stats.mem_stall_cycles',stats.mem_stall_cycles)
+        #     print('stats.compute_cycles',best_cycles - stats.mem_stall_cycles)
+        #     print('acc_cycle',(best_cycles - stats.mem_stall_cycles)/num_tiles)
 
 
-            print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
+        #     print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
 
             # sys.exit() 
             # 为什么这里会有 sys.exit() 直接退出系统了，那后续的就不会执行了？ 

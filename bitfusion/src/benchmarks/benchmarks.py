@@ -218,17 +218,17 @@ def create_fc(input_size, weight_size, c_dtype=None, w_dtype=None):
 
 benchlist = [
     "FC_test",
-    # "inceptionv3",
-    # "AlexNet",
-    # "vit",
-    # "rte",
-    # "wnli",
-    # "mrpc",
-    # "cola",
-    # "sst_2",
-    # "qnli",
-    # "qqp",
-    # "mnli",
+    "inceptionv3",
+    "AlexNet",
+    "vit",
+    "rte",
+    "wnli",
+    "mrpc",
+    "cola",
+    "sst_2",
+    "qnli",
+    "qqp",
+    "mnli",
 
 ]
 

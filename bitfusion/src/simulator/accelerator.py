@@ -79,7 +79,7 @@ class Accelerator(object):
     #     prec = max(prec, self.pmin)
     #     return int(self.pmax / prec)
 
-    def get_compute_cycles(self, ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col=False):
+    def get_compute_cycles(self, ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col=False,low=0,mid=0,high=0):
         """
         Compute instruction
         args:
@@ -92,46 +92,97 @@ class Accelerator(object):
             b: Batch Size
             im2col: boolean. If true, we assume the cpu does im2col. Otherwise,
                     we do convolutions channel-wise
+            low: iprec 为2bit的概率
+            mid: iprec 为4bit的概率
+            high: iprec 为8bit的概率
         """
+        # import ipdb;ipdb.set_trace()
         overhead = 0
+        if low==0 and mid==0 and high==0:
+            if im2col:
+                ni = kw * kh * ic
+                no = oc
+                batch = b * oh * ow
 
-        if im2col:
-            ni = kw * kh * ic
-            no = oc
-            batch = b * oh * ow
-
-            # 这里和ant有区别
-            # 有M N说明跟矩阵大小有关系
-            compute_cycles = (
-                batch
-                * ceil_a_by_b(no, self.M)
-                * (
-                    # 这个加个选择，就可以实现内部动态精度调配
-                    ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec, wprec))
-                    + overhead
+                # 这里和ant有区别
+                # 有M N说明跟矩阵大小有关系
+                compute_cycles = (
+                    batch
+                    * ceil_a_by_b(no, self.M)
+                    * (
+                        # 这个加个选择，就可以实现内部动态精度调配
+                        ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec, wprec))
+                        + overhead
+                    )
                 )
-            )
 
-            
-            # ant
-            # compute_cycles = batch * ceil_a_by_b(no, self.M * self.get_perf_factor(wprec)) * \
-            #         (ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec)))
+                
+                # ant
+                # compute_cycles = batch * ceil_a_by_b(no, self.M * self.get_perf_factor(wprec)) * \
+                #         (ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec)))
 
-        else:
-            compute_cycles = (
-                b
-                * ceil_a_by_b(oc, self.M)
-                * ow
-                * oh
-                * kw
-                * kh
-                * (
-                    # 类似整体模块资源划分函数 
-                    # TODO 进行计算资源划分修改
-                    ceil_a_by_b(ic, self.N * self.get_perf_factor(iprec, wprec))
-                    + overhead
+            else:
+                compute_cycles = (
+                    b
+                    * ceil_a_by_b(oc, self.M)
+                    * ow
+                    * oh
+                    * kw
+                    * kh
+                    * (
+                        # 类似整体模块资源划分函数 
+                        # TODO 进行计算资源划分修改
+                        ceil_a_by_b(ic, self.N * self.get_perf_factor(iprec, wprec))
+                        + overhead
+                    )
                 )
-            )
+
+        # 动态精度的计算
+        if low != 0 or mid != 0 or high != 0:
+
+            perf_factor_low = self.get_perf_factor(2, wprec)
+            perf_factor_mid = self.get_perf_factor(4, wprec)
+            perf_factor_high = self.get_perf_factor(8, wprec)
+            perf_factor = perf_factor_low * low + perf_factor_mid * mid + perf_factor_high * high
+
+            if im2col:
+                ni = kw * kh * ic
+                no = oc
+                batch = b * oh * ow
+
+                # 这里和ant有区别
+                # 有M N说明跟矩阵大小有关系
+                compute_cycles = (
+                    batch
+                    * ceil_a_by_b(no, self.M)
+                    * (
+                        # 这个加个选择，就可以实现内部动态精度调配
+                        ceil_a_by_b(ni, self.N * perf_factor)
+                        + overhead
+                    )
+                )
+
+                
+                # ant
+                # compute_cycles = batch * ceil_a_by_b(no, self.M * self.get_perf_factor(wprec)) * \
+                #         (ceil_a_by_b(ni, self.N * self.get_perf_factor(iprec)))
+
+            else:
+                compute_cycles = (
+                    b
+                    * ceil_a_by_b(oc, self.M)
+                    * ow
+                    * oh
+                    * kw
+                    * kh
+                    * (
+                        # 类似整体模块资源划分函数 
+                        # TODO 进行计算资源划分修改
+                        ceil_a_by_b(ic, self.N * perf_factor)
+                        + overhead
+                    )
+                )
+
 
         # print('compute_cycles',compute_cycles)
         # sys.exit()

@@ -58,6 +58,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # 后续内存读写和这个也有关系
     perf_factor = acc_obj.get_perf_factor(iprec, wprec)
 
+    
+
 
 
 
@@ -101,6 +103,7 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         iw = K + (ow - 1) * S
         ih = K + (oh - 1) * S
         writes["act"] = iw * ih * ic * b * iprec
+
 
     oprec = 32
 
