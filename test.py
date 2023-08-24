@@ -78,12 +78,18 @@ sim_sweep_columns = ['N', 'M',
         'DRAM Read', 'DRAM Write',
         'Bandwidth (bits/cycle)',
         'WBUF Size (bits)', 'OBUF Size (bits)', 'IBUF Size (bits)',
-        'Batch size']
+        'Batch size',
+        'avg_iprec','avg_wprec']
 
 # bf_e_sim_sweep_csv = os.path.join(results_dir, 'bitfusion-eyeriss-sim-sweep.csv')
-bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_new_bitfusion_fc_'
+
+bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_di_dw_bitfusion_'
                                   + str(config_ini.getint('system','if_width'))+
                                   '_sim_sweep.csv')
+
+# bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_Nomal_bitfusion_'
+#                                   + str(config_ini.getint('system','if_width'))+
+#                                   '_sim_sweep.csv')
 
 
 #对文件的存在进行判断

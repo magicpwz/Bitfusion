@@ -41,7 +41,7 @@ def get_stats_fast(conv_params, tiling, order_type,verbose=False):
         TODOs: Without im2col, the calculation of weight and act size is inexact
     """
     # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
 
     num_b, b = tiling["B/b"]
     num_ow, ow = tiling["OW/ow"]
@@ -77,16 +77,34 @@ def get_stats_fast(conv_params, tiling, order_type,verbose=False):
     # 后续内存读写和这个也有关系
 
     # perf_factor = acc_obj.get_perf_factor(iprec, wprec)
+    # input & weight 9 种可能性
+    
+    perf_factor_low_low = acc_obj.get_perf_factor(2, 2)
+    perf_factor_low_mid = acc_obj.get_perf_factor(2, 4)
+    perf_factor_low_high = acc_obj.get_perf_factor(2, 8)
 
-    perf_factor_low = acc_obj.get_perf_factor(2, wprec)
-    perf_factor_mid = acc_obj.get_perf_factor(4, wprec)
-    perf_factor_high = acc_obj.get_perf_factor(8, wprec)
+    perf_factor_mid_low = acc_obj.get_perf_factor(4, 2)
+    perf_factor_mid_mid = acc_obj.get_perf_factor(4, 4)
+    perf_factor_mid_high = acc_obj.get_perf_factor(4, 8)
+
+    perf_factor_high_low = acc_obj.get_perf_factor(8, 2)
+    perf_factor_high_mid = acc_obj.get_perf_factor(8, 4)
+    perf_factor_high_high = acc_obj.get_perf_factor(8, 8)
+
 
     # 可能存在小数
     # 用概率就会存在小数
     # 展示不进行取整操作
     # 等效Fusion Unit切分个数
-    perf_factor = perf_factor_low * i_low + perf_factor_mid * i_mid + perf_factor_high * i_high
+    # perf_factor = perf_factor_low * i_low + perf_factor_mid * i_mid + perf_factor_high * i_high
+
+    perf_factor_i_low = perf_factor_low_low * (i_low * w_low) + perf_factor_low_mid * (i_low * w_mid) + perf_factor_low_high * (i_low * w_high)
+    perf_factor_i_mid = perf_factor_mid_low * (i_mid * w_low) + perf_factor_mid_mid * (i_mid * w_mid) + perf_factor_mid_high * (i_mid * w_high) 
+    perf_factor_i_high = perf_factor_high_low * (i_high * w_low) + perf_factor_high_mid * (i_high * w_mid) + perf_factor_high_high * (i_high * w_high) 
+
+
+    perf_factor = perf_factor_i_low + perf_factor_i_mid + perf_factor_i_high
+    
 
     # key-value
     writes = {}
@@ -174,6 +192,12 @@ def get_stats_fast(conv_params, tiling, order_type,verbose=False):
     # 首先是循环块的优化
     # First the loop block optimizations
     stats = Stats()
+    
+    # 这里的 iprec & wprec 已经在simulator中调整为平均精度了
+    # TODO 后续会添加概率的输出
+    stats.avg_iprec = iprec
+    stats.avg_wprec = wprec
+
     write_promote = {"wgt": True, "act": True, "out": True}
     read_promote = {"out": True}
     
@@ -372,7 +396,7 @@ def get_stats_fast(conv_params, tiling, order_type,verbose=False):
 
     # 加入概率传参
     compute_cycles = num_tiles * acc_obj.get_compute_cycles(
-        ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col,i_low,i_mid,i_high
+        ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col, perf_factor
     )
 
     # print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
@@ -414,7 +438,7 @@ def optimize_for_order(conv_params):
 
     return_dict = {}
     # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
 
     # 偏函数 固定该函数的第一个参数为 conv_params
     _bound_optimizer_method = functools.partial(_optimize_for_order, conv_params)
@@ -491,7 +515,7 @@ def optimize_for_order(conv_params):
 def get_loop_instructions(conv_params, tiling, order_type):
 
     # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
 
     I = (O - 1) * S + K
 
@@ -662,7 +686,7 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
     """
 
     # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
 
     I = (O - 1) * S + K
 

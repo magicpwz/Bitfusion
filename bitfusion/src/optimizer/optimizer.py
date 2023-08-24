@@ -154,6 +154,11 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # 首先是循环块的优化
     # First the loop block optimizations
     stats = Stats()
+
+    # 量化精度输出,这边是每个层的设置精度
+    stats.avg_iprec = iprec
+    stats.avg_wprec = wprec
+
     write_promote = {"wgt": True, "act": True, "out": True}
     read_promote = {"out": True}
     

@@ -22,6 +22,7 @@ class SimulatorSweep(object):
         self.logger = logging.getLogger("{}.{}".format(__name__, "Simulator"))
         self.logger.setLevel(log_level)
 
+        # 输出设置
         self.columns = [
             "N",
             "M",
@@ -44,6 +45,8 @@ class SimulatorSweep(object):
             "OBUF Size (bits)",
             "IBUF Size (bits)",
             "Batch size",
+            'avg_iprec',
+            'avg_wprec',
         ]
 
         if os.path.exists(csv_filename):
@@ -211,6 +214,9 @@ class SimulatorSweep(object):
                                                         stalls = stats[
                                                             layer
                                                         ].mem_stall_cycles
+                                                        # 保留三位小数
+                                                        avg_iprec = round(stats[layer].avg_iprec,3)
+                                                        avg_wprec = round(stats[layer].avg_wprec,3)
 
                                                         data_line.append(
                                                             (
@@ -235,6 +241,8 @@ class SimulatorSweep(object):
                                                                 obuf,
                                                                 ibuf,
                                                                 batch_size,
+                                                                avg_iprec,
+                                                                avg_wprec,
                                                             )
                                                         )
 

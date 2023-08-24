@@ -9,6 +9,11 @@ class Stats(object):
         self.namespaces = ['act', 'wgt', 'out', 'dram']
         self.reads = {}
         self.writes = {}
+
+        # 用于记录层内随机动态 input & weight的平均计算精度
+        self.avg_iprec = 0
+        self.avg_wprec =0
+
         for n in self.namespaces:
             self.reads[n] = 0
             self.writes[n] = 0

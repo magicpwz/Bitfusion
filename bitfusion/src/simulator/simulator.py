@@ -664,6 +664,7 @@ class Simulator(object):
         # 输入数据大小 可反推
         # I = (O - 1) * S + K
 
+        # 非动态
 
         # old
         # conv_params = (
@@ -680,29 +681,51 @@ class Simulator(object):
         #     self.get_energy_cost(),
         # )
 
-        # # 固定分配概率
-        # i_low = 0.2
-        # i_mid = 0.6
-        # i_high = 0.2
+
+        # 动态
+        # 随机概率 ->针对每一个卷积 or FC 给出一个概率分配方案
+        # 生成三个随机数
+        # for input
+        i_random1 = random.randint(1,15)
+        i_random2 = random.randint(1,20)
+        i_random3 = random.randint(1,5)
+
 
         # 随机概率 ->针对每一个卷积 or FC 给出一个概率分配方案
         # 生成三个随机数
-        random1 = random.randint(1,15)
-        random2 = random.randint(1,20)
-        random3 = random.randint(1,5)
+        # for weight
+        w_random1 = random.randint(1,15)
+        w_random2 = random.randint(1,20)
+        w_random3 = random.randint(1,5)
+
 
         # 计算随机数的和
-        total_sum = random1 + random2 + random3
+        i_total_sum = i_random1 + i_random2 + i_random3
+        w_total_sum = w_random1 + w_random2 + w_random3
 
-        # 计算每个变量的值
-        i_low = random1 / total_sum
-        i_mid = random2 / total_sum
-        i_high = random3 / total_sum
+        # 计算每个变量的值 input
+        i_low = i_random1 / i_total_sum
+        i_mid = i_random2 / i_total_sum
+        i_high = i_random3 / i_total_sum
+
+        # 计算每个变量的值 weight
+        w_low = w_random1 / w_total_sum
+        w_mid = w_random2 / w_total_sum
+        w_high = w_random3 / w_total_sum
+
+
 
         avg_iprec = 2 * i_low + 4 * i_mid + 8 * i_high
+
+        avg_wprec = 2 * w_low + 4 * w_mid + 8 * w_high
         
+
+
         # 调整之后的输入平均精度
         iprec = avg_iprec
+        wprec = avg_wprec
+
+        # 调整之后的weight平均精度
 
         conv_params = (
             self.accelerator,
@@ -718,7 +741,10 @@ class Simulator(object):
             self.get_energy_cost(),
             i_low,
             i_mid,
-            i_high
+            i_high,
+            w_low,
+            w_mid,
+            w_high
         )
 
         # TODO 分配相关？？
