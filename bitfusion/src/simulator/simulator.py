@@ -625,7 +625,7 @@ class Simulator(object):
         # print('im2col',im2col)
 
         B = batch_size
-
+        # print('b',B)
         # 输入数据大小
         I = (O - 1) * S + K
 

@@ -22,7 +22,7 @@ from bitfusion.src.optimizer.optimizer import optimize_for_order, get_stats_fast
 
 # ant配置
 # batch_size = 64
-batch_size = 1
+batch_size = 16
 
 # 默认配置
 # batch_size = 16
@@ -83,11 +83,15 @@ sim_sweep_columns = ['N', 'M',
 
 # bf_e_sim_sweep_csv = os.path.join(results_dir, 'bitfusion-eyeriss-sim-sweep.csv')
 
-bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_di_dw_bitfusion_'
+# bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_di_dw_bitfusion_'
+#                                   + str(config_ini.getint('system','if_width'))+
+#                                   '_sim_sweep.csv')
+
+bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_di_dw_bitfusion_b_16_'
                                   + str(config_ini.getint('system','if_width'))+
                                   '_sim_sweep.csv')
 
-# bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_Nomal_bitfusion_'
+# bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_Nomal_bitfusion_b_16'
 #                                   + str(config_ini.getint('system','if_width'))+
 #                                   '_sim_sweep.csv')
 
@@ -104,8 +108,7 @@ bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_di_dw_bitfusion_'
 bf_e_sim_sweep_df = pandas.DataFrame(columns=sim_sweep_columns)
 
 
-
-print('bb:',batch_size)
+# 数据写入
 bf_e_results = check_pandas_or_run(bf_e_sim, bf_e_sim_sweep_df,
         bf_e_sim_sweep_csv, batch_size=batch_size)
 

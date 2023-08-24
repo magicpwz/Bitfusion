@@ -217,7 +217,7 @@ def create_fc(input_size, weight_size, c_dtype=None, w_dtype=None):
 # ]
 
 benchlist = [
-    "FC_test",
+    # "FC_test",
     "inceptionv3",
     "AlexNet",
     "vit",
@@ -234,8 +234,8 @@ benchlist = [
 
 
 def get_bench_nn(bench_name, WRPN=False):
-
-    batch_size = 1
+    # 修正
+    batch_size = 16
 
     if bench_name == "AlexNet":
         if WRPN:
@@ -333,7 +333,7 @@ def get_bench_numbers(graph, sim_obj, batch_size=1):
 
 def get_FC_test():
     g = Graph("AlexNet", dataset="imagenet", log_level=logging.INFO)
-    batch_size = 1
+    batch_size = 16
 
     with g.as_default():
         with g.name_scope("inputs"):
