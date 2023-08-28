@@ -218,17 +218,17 @@ def create_fc(input_size, weight_size, c_dtype=None, w_dtype=None):
 
 benchlist = [
     # "FC_test",
-    "inceptionv3",
+    # "inceptionv3",
     "AlexNet",
-    "vit",
-    "rte",
-    "wnli",
-    "mrpc",
-    "cola",
-    "sst_2",
-    "qnli",
-    "qqp",
-    "mnli",
+    # "vit",
+    # "rte",
+    # "wnli",
+    # "mrpc",
+    # "cola",
+    # "sst_2",
+    # "qnli",
+    # "qqp",
+    # "mnli",
 
 ]
 
@@ -371,7 +371,7 @@ def get_alex_net():
 
     # batch_size = 16
     # for test set to 1
-    batch_size = 1
+    batch_size = 16
 
     with g.as_default():
         with g.name_scope("inputs"):
@@ -399,8 +399,10 @@ def get_alex_net():
                 kernel_size=11,
                 stride=(1, 4, 4, 1),
                 pad="VALID",
-                c_dtype=FQDtype.FXP4,
-                w_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
+                w_dtype=FQDtype.FXP8,
+                # c_dtype=FQDtype.FXP4,
+                # w_dtype=FQDtype.FXP4,
             )
 
             # print('test:',conv1_a)
@@ -418,8 +420,8 @@ def get_alex_net():
                 kernel_size=11,
                 stride=(1, 4, 4, 1),
                 pad="VALID",
-                c_dtype=FQDtype.FXP4,
-                w_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
+                w_dtype=FQDtype.FXP8,
             )
         with g.name_scope("pool1_b"):
             pool1_b = maxPool(
@@ -432,8 +434,8 @@ def get_alex_net():
                 filters=128,
                 kernel_size=5,
                 pad="SAME",
-                c_dtype=FQDtype.FXP4,
-                w_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
+                w_dtype=FQDtype.FXP8,
             )
         with g.name_scope("pool2_a"):
             pool2_a = maxPool(conv2_a, pooling_kernel=(1, 2, 2, 1), pad="VALID")
@@ -444,8 +446,8 @@ def get_alex_net():
                 filters=128,
                 kernel_size=5,
                 pad="SAME",
-                c_dtype=FQDtype.FXP4,
-                w_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
+                w_dtype=FQDtype.FXP8,
             )
         with g.name_scope("pool2_b"):
             pool2_b = maxPool(conv2_b, pooling_kernel=(1, 2, 2, 1), pad="VALID")
@@ -566,7 +568,7 @@ def get_alex_net_wrpn():
                 kernel_size=11,
                 stride=(1, 4, 4, 1),
                 pad="VALID",
-                c_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
                 w_dtype=FQDtype.FXP8,
             )
         with g.name_scope("pool1_a"):
@@ -581,7 +583,7 @@ def get_alex_net_wrpn():
                 kernel_size=11,
                 stride=(1, 4, 4, 1),
                 pad="VALID",
-                c_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
                 w_dtype=FQDtype.FXP8,
             )
         with g.name_scope("pool1_b"):
@@ -595,8 +597,8 @@ def get_alex_net_wrpn():
                 filters=256,
                 kernel_size=5,
                 pad="SAME",
-                c_dtype=FQDtype.FXP4,
-                w_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
+                w_dtype=FQDtype.FXP8,
             )
         with g.name_scope("pool2_a"):
             pool2_a = maxPool(conv2_a, pooling_kernel=(1, 2, 2, 1), pad="VALID")
@@ -607,7 +609,7 @@ def get_alex_net_wrpn():
                 filters=256,
                 kernel_size=5,
                 pad="SAME",
-                c_dtype=FQDtype.FXP4,
+                c_dtype=FQDtype.FXP8,
                 w_dtype=FQDtype.FXP4,
             )
         with g.name_scope("pool2_b"):

@@ -4,27 +4,16 @@ import math
 # import ConfigParser
 import configparser as ConfigParser
 import numpy as np
-import inspect
 
 from bitfusion.src.utils.utils import ceil_a_by_b, log2, lookup_pandas_dataframe
 from bitfusion.src.simulator.stats import Stats
 from bitfusion.src.simulator.loop_stack import LoopStack
+# old优化函数
+# from bitfusion.src.optimizer.optimizer import optimize_for_order, get_stats_fast
+# new 优化函数
+from bitfusion.src.optimizer.optimizer_test import optimize_for_order, get_stats_fast
 
-# old 优化函数 bitfusion 
-from bitfusion.src.optimizer.optimizer_bitfusion import optimize_for_order, get_stats_fast
-from bitfusion.src.simulator.accelerator_sample import Accelerator
-
-# new 优化函数 coarse
-# from bitfusion.src.optimizer.optimizer_coarse import optimize_for_order, get_stats_fast
-# from bitfusion.src.simulator.accelerator_coarse import Accelerator
-
-# new fine_grain
-# from bitfusion.src.optimizer.optimizer_fine_grain import optimize_for_order, get_stats_fast
-# from bitfusion.src.simulator.accelerator_fine_grain import Accelerator
-
-
-
-
+from bitfusion.src.simulator.accelerator import Accelerator
 from bitfusion.src.simulator.energy import EnergyTuple
 
 from bitfusion.sram.cacti_sweep import CactiSweep
@@ -660,7 +649,12 @@ class Simulator(object):
         self.logger.debug("Number of OC Tiles: {}".format(num_OC_tiles))
         self.logger.debug("Number of B Tiles: {}".format(num_B_tiles))
 
-
+        # if( K == 1 and O == 1 and S == 1  ):
+        #     print("Number of O Tiles: {}".format(num_O_tiles))
+        #     print("Number of IC Tiles: {}".format(num_IC_tiles))
+        #     print("Number of OC Tiles: {}".format(num_OC_tiles))
+        #     print("Number of B Tiles: {}".format(num_B_tiles))
+        #     sys.exit()
 
         # sys.exit()
         best_instructions_dict = {}
@@ -669,6 +663,23 @@ class Simulator(object):
 
         # 输入数据大小 可反推
         # I = (O - 1) * S + K
+
+        # 非动态
+
+        # old
+        # conv_params = (
+        #     self.accelerator,
+        #     K,
+        #     O,
+        #     S,
+        #     IC,
+        #     OC,
+        #     B,
+        #     iprec,
+        #     wprec,
+        #     im2col,
+        #     self.get_energy_cost(),
+        # )
 
 
         # 动态
@@ -703,19 +714,20 @@ class Simulator(object):
         w_high = w_random3 / w_total_sum
 
 
+
         avg_iprec = 2 * i_low + 4 * i_mid + 8 * i_high
+
         avg_wprec = 2 * w_low + 4 * w_mid + 8 * w_high
         
 
-    
-        function_source_file = inspect.getsourcefile(optimize_for_order)
-        file_name = os.path.basename(function_source_file)
-        
-        print(file_name)
-        # import ipdb;ipdb.set_trace()
 
-        if file_name == 'optimizer_bitfusion.py':
-            conv_params = (
+        # 调整之后的输入平均精度
+        # iprec = avg_iprec
+        # wprec = avg_wprec
+
+        # 调整之后的weight平均精度
+
+        conv_params = (
             self.accelerator,
             K,
             O,
@@ -727,32 +739,13 @@ class Simulator(object):
             wprec,
             im2col,
             self.get_energy_cost(),
+            i_low,
+            i_mid,
+            i_high,
+            w_low,
+            w_mid,
+            w_high
         )
-        else:
-
-            iprec = avg_iprec
-            wprec = avg_wprec
-
-            conv_params = (
-                self.accelerator,
-                K,
-                O,
-                S,
-                IC,
-                OC,
-                B,
-                iprec,
-                wprec,
-                im2col,
-                self.get_energy_cost(),
-                i_low,
-                i_mid,
-                i_high,
-                w_low,
-                w_mid,
-                w_high
-            )
-        
 
         # TODO 分配相关？？
         # 具体优化细节
@@ -789,18 +782,18 @@ class Simulator(object):
 
 
 
-        # # #fc层测试
-        # # if( K == 1 and O == 1 and S == 1  ):
-        # #     print('cycle',best_cycles)
-        # #     # 优化后的参数
+        # #fc层测试
+        # if( K == 1 and O == 1 and S == 1  ):
+        #     print('cycle',best_cycles)
+        #     # 优化后的参数
             
-        # num_b, b = best_tiling["B/b"]
-        # num_ow, ow = best_tiling["OW/ow"]
-        # num_oh, oh = best_tiling["OH/oh"]
-        # num_ic, ic = best_tiling["IC/ic"]
-        # num_oc, oc = best_tiling["OC/oc"]
-        # # 优化后的tiling
-        # num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
+        num_b, b = best_tiling["B/b"]
+        num_ow, ow = best_tiling["OW/ow"]
+        num_oh, oh = best_tiling["OH/oh"]
+        num_ic, ic = best_tiling["IC/ic"]
+        num_oc, oc = best_tiling["OC/oc"]
+        # 优化后的tiling
+        num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
 
         # print('num_b * num_ow * num_oh * num_ic * num_oc',
             #   num_b , num_ow , num_oh , num_ic , num_oc)
@@ -809,7 +802,8 @@ class Simulator(object):
         #     print('num_tiles',num_tiles)
         #     print('stats.mem_stall_cycles',stats.mem_stall_cycles)
         #     print('stats.compute_cycles',best_cycles - stats.mem_stall_cycles)
-
+        print('i_w',iprec,wprec)
+        print('acc_cycle',(best_cycles - stats.mem_stall_cycles)/num_tiles)
 
 
         #     print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)

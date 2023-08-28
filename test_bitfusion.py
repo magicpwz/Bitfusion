@@ -17,7 +17,7 @@ from bitfusion.src.simulator.stats import Stats
 from bitfusion.src.simulator.simulator import Simulator
 from bitfusion.src.sweep.sweep import SimulatorSweep, check_pandas_or_run
 from bitfusion.src.utils.utils import *
-from bitfusion.src.optimizer.optimizer import optimize_for_order, get_stats_fast
+from bitfusion.src.optimizer.optimizer_bitfusion import optimize_for_order, get_stats_fast
 
 
 # ant配置
@@ -28,11 +28,11 @@ batch_size = 16
 # batch_size = 16
 # batch_size = 32
 
-results_dir = './results'
+results_dir = './results/bitfusion'
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
 
-fig_dir = './fig'
+fig_dir = './fig/bitfusion'
 if not os.path.exists(fig_dir):
     os.makedirs(fig_dir)
 
@@ -81,19 +81,11 @@ sim_sweep_columns = ['N', 'M',
         'Batch size',
         'avg_iprec','avg_wprec']
 
-# bf_e_sim_sweep_csv = os.path.join(results_dir, 'bitfusion-eyeriss-sim-sweep.csv')
 
-# bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_di_dw_bitfusion_'
-#                                   + str(config_ini.getint('system','if_width'))+
-#                                   '_sim_sweep.csv')
 
-bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_di_dw_bitfusion_b_16_'
+bf_e_sim_sweep_csv = os.path.join(results_dir, 'test_'
                                   + str(config_ini.getint('system','if_width'))+
                                   '_sim_sweep.csv')
-
-# bf_e_sim_sweep_csv = os.path.join(results_dir, '16*32_Nomal_bitfusion_b_16'
-#                                   + str(config_ini.getint('system','if_width'))+
-#                                   '_sim_sweep.csv')
 
 
 #对文件的存在进行判断

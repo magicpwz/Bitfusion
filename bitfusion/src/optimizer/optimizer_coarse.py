@@ -102,7 +102,8 @@ def get_stats_fast(conv_params, tiling, order_type,verbose=False):
     perf_factor_i_mid = perf_factor_mid_low * (i_mid * w_low) + perf_factor_mid_mid * (i_mid * w_mid) + perf_factor_mid_high * (i_mid * w_high) 
     perf_factor_i_high = perf_factor_high_low * (i_high * w_low) + perf_factor_high_mid * (i_high * w_mid) + perf_factor_high_high * (i_high * w_high) 
 
-
+    # TODO 读写部分需要修改
+    # 不能简单的当平均计算
     perf_factor = perf_factor_i_low + perf_factor_i_mid + perf_factor_i_high
     
 
@@ -215,6 +216,8 @@ def get_stats_fast(conv_params, tiling, order_type,verbose=False):
     for loop in reversed(order_type):
         # besttiling -> tiling[loop]
         num_tiles, tile_size = tiling[loop]
+
+        # num_tiles = a + b + c
         
         # 写
         # promote all writes
@@ -395,9 +398,43 @@ def get_stats_fast(conv_params, tiling, order_type,verbose=False):
     # sys.exit()
 
     # 加入概率传参
-    compute_cycles = num_tiles * acc_obj.get_compute_cycles(
-        ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col, perf_factor
-    )
+
+    # compute_cycles = num_tiles * acc_obj.get_compute_cycles(
+    #     ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col, perf_factor
+    # )
+
+
+    acc_low_low = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 2, 2, im2col)
+    acc_low_mid = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 2, 4, im2col)
+    acc_low_high = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 2, 8, im2col)
+
+    acc_mid_low = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 4, 2, im2col)
+    acc_mid_mid = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 4, 4, im2col)
+    acc_mid_high = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 4, 8, im2col)
+
+    acc_high_low = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 8, 2, im2col)
+    acc_high_mid = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 8, 4, im2col)
+    acc_high_high = acc_obj.get_compute_cycles(ic, oc, ow, oh, b, kw, kh, 8, 8, im2col)
+
+
+
+    num_tiles_acc_low = round(acc_low_low * (i_low * w_low) * num_tiles ) \
+                    + round(acc_low_mid * (i_low * w_mid) * num_tiles) \
+                    + round(acc_low_high * (i_low * w_high) * num_tiles )
+    
+    num_tiles_acc_mid = round(acc_mid_low * (i_mid * w_low) * num_tiles ) \
+                    + round(acc_mid_mid * (i_mid * w_mid) * num_tiles) \
+                    + round(acc_mid_high * (i_mid * w_high) * num_tiles) 
+    num_tiles_acc_high = round(acc_high_low * (i_high * w_low) * num_tiles) \
+                     + round(acc_high_mid * (i_high * w_mid) * num_tiles) \
+                     + round(acc_high_high * (i_high * w_high) * num_tiles) 
+
+
+    compute_cycles = num_tiles_acc_low + num_tiles_acc_mid + num_tiles_acc_high
+
+    # compute_cycles = num_tiles * acc_obj.get_compute_cycles(
+    #     ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col
+    # )
 
     # print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
 
@@ -720,11 +757,13 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
             oh = ow
             
             num_ow = ceil_a_by_b(O, ow)
+
             num_oh = ceil_a_by_b(O, oh)
 
             for _ic in range(num_IC_tiles):
 
                 ic = min(1 << _ic, IC)
+                
                 num_ic = ceil_a_by_b(IC, ic)
 
                 for _oc in range(num_OC_tiles):
@@ -745,6 +784,7 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
                     tiling["IC/ic"] = (num_ic, ic)
                     tiling["OC/oc"] = (num_oc, oc)
 
+                    # 迭代得出最优结果
                     stats = get_stats_fast(
                         conv_params, tiling, order_type, verbose=False
                     )

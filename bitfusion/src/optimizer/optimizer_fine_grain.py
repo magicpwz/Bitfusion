@@ -12,6 +12,8 @@ from bitfusion.src.simulator.stats import Stats
 
 import numpy as np
 
+import random
+
 logger = logging.getLogger("{}.{}".format(__name__, "Optimizer"))
 logger.setLevel(logging.DEBUG)
 
@@ -33,12 +35,13 @@ tile_deps["OC/oc"] = {"act": False, "wgt": True, "out": True}
 
 
 # 最重点
-def get_stats_fast(conv_params, tiling, order_type, verbose=False):
+def get_stats_fast(conv_params, tiling, order_type,verbose=False):
     """
     Returns cycles and memory accesses to DRAM, IBUF, OBUF, and WBUF
         TODOs: Without im2col, the calculation of weight and act size is inexact
     """
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+    # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
 
     num_b, b = tiling["B/b"]
     num_ow, ow = tiling["OW/ow"]
@@ -48,25 +51,65 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     kw = kh = K
 
+    # import ipdb; ipdb.set_trace()
 
-    # TODO 
-    # Q1:
+    
 
+    # 平均精度设置
+    # 目前先对input进行设置,weight暂时固定
+    # 这个参数后续可以移植到不同层中进行测略选择
+
+  
+
+    # 固定概率
+    # i_low = 0.35
+    # i_mid = 0.45
+    # i_high = 0.1
+    
+
+    
+    # avg_iprec = 2 * i_low + 4 * i_mid + 8 * i_high
+
+    # iprec = avg_iprec
 
     # 这个参数是什么含义 -- 一个大的Fusion Unit 分成多少个小块 (后续的精度选择操作可以在这个上面做文章)
     # 精度设置选择
     # 后续内存读写和这个也有关系
-    perf_factor = acc_obj.get_perf_factor(iprec, wprec)
 
+    # perf_factor = acc_obj.get_perf_factor(iprec, wprec)
+    # input & weight 9 种可能性
     
+    perf_factor_low_low = acc_obj.get_perf_factor(2, 2)
+    perf_factor_low_mid = acc_obj.get_perf_factor(2, 4)
+    perf_factor_low_high = acc_obj.get_perf_factor(2, 8)
+
+    perf_factor_mid_low = acc_obj.get_perf_factor(4, 2)
+    perf_factor_mid_mid = acc_obj.get_perf_factor(4, 4)
+    perf_factor_mid_high = acc_obj.get_perf_factor(4, 8)
+
+    perf_factor_high_low = acc_obj.get_perf_factor(8, 2)
+    perf_factor_high_mid = acc_obj.get_perf_factor(8, 4)
+    perf_factor_high_high = acc_obj.get_perf_factor(8, 8)
+
+
+    # 可能存在小数
+    # 用概率就会存在小数
+    # 展示不进行取整操作
+    # 等效Fusion Unit切分个数
+    # perf_factor = perf_factor_low * i_low + perf_factor_mid * i_mid + perf_factor_high * i_high
+
+    perf_factor_i_low = perf_factor_low_low * (i_low * w_low) + perf_factor_low_mid * (i_low * w_mid) + perf_factor_low_high * (i_low * w_high)
+    perf_factor_i_mid = perf_factor_mid_low * (i_mid * w_low) + perf_factor_mid_mid * (i_mid * w_mid) + perf_factor_mid_high * (i_mid * w_high) 
+    perf_factor_i_high = perf_factor_high_low * (i_high * w_low) + perf_factor_high_mid * (i_high * w_mid) + perf_factor_high_high * (i_high * w_high) 
 
 
 
+    perf_factor = perf_factor_i_low + perf_factor_i_mid + perf_factor_i_high
+    
 
     # key-value
     writes = {}
     reads = {}
-
 
     # 初始化，预设一个标准单元值
     # 实际值：单元 * 后续tiling
@@ -74,14 +117,11 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # 有无资源的溢出，会导致 无法使用 
     if im2col: # false 
         writes["wgt"] = (
-            # 平均一个小块需要处理的数据量*单列的小块个数
-            # 以一列为标准单元
             ceil_a_by_b(K * K * ic, acc_obj.N * perf_factor)
-            * oc
-            * wprec
             * acc_obj.N
             * perf_factor
-            
+            * oc
+            * wprec
         )  # ceil_a_by_b(oc, acc_obj.M) * acc_obj.M * \
     else:
         # TODO: Figure this out
@@ -103,7 +143,6 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         iw = K + (ow - 1) * S
         ih = K + (oh - 1) * S
         writes["act"] = iw * ih * ic * b * iprec
-
 
     oprec = 32
 
@@ -154,8 +193,9 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     # 首先是循环块的优化
     # First the loop block optimizations
     stats = Stats()
-
-    # 量化精度输出,这边是每个层的设置精度
+    
+    # 这里的 iprec & wprec 已经在simulator中调整为平均精度了
+    # TODO 后续会添加概率的输出
     stats.avg_iprec = iprec
     stats.avg_wprec = wprec
 
@@ -175,8 +215,9 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     for loop in reversed(order_type):
         # besttiling -> tiling[loop]
-        # 这里的num_tiles是('B/b', 'OC/oc', 'OW/ow', 'IC/ic', 'OH/oh')各自的num_tiles
         num_tiles, tile_size = tiling[loop]
+
+        # num_tiles = a + b + c
         
         # 写
         # promote all writes
@@ -186,8 +227,6 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
                 # If tile loop depends on the namespace index, make the read size larger
                 if tile_deps[loop][namespace]:
                     # 倍数计算
-                    # writes[namespace] *= max(num_tiles) in num_tiles_b/o/i/c
-                    
                     writes[namespace] *= num_tiles
                     
                     # If tile size is larger than the SRAM, set promote to False
@@ -205,7 +244,6 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
             if read_promote[namespace]:
                 # Tile loop depends on the namespace index
                 if tile_deps[loop][namespace]:
-
                     reads[namespace] *= num_tiles
                     # Tile size is now larger than the SRAM, set promote to False
                     if reads[namespace] > acc_obj.sram[namespace] * 8.0 / 2:
@@ -234,6 +272,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         stats.reads[namespace] = reads[namespace]
         stats.writes["dram"] += reads[namespace]
 
+
+    # 和memory_stalls关系不大，暂时没有进行动态精度的修改 - 8.23
     # 和精度有关!!
     # 层内优化
     # Next the inner loop optimizations
@@ -242,13 +282,22 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
         # (os_loop: ic x kh x kw): Wgt: True, Out: False, Act: True
         # (ws_loop: b x oh x ow): Wgt: False, Out: True, Act: True
         # (is_loop: oc): Wgt: True, Out: True, Act: False
-
+        
         is_loop = ceil_a_by_b(oc, acc_obj.M) * acc_obj.M
+        
+        # old
+        # os_loop = (
+        #     ceil_a_by_b(ic * kh * kw, acc_obj.N * acc_obj.get_perf_factor(iprec, wprec))
+        #     * acc_obj.N
+        #     * acc_obj.get_perf_factor(iprec, wprec)
+        # )
+
         os_loop = (
-            ceil_a_by_b(ic * kh * kw, acc_obj.N * acc_obj.get_perf_factor(iprec, wprec))
+            ceil_a_by_b(ic * kh * kw, acc_obj.N * perf_factor)
             * acc_obj.N
-            * acc_obj.get_perf_factor(iprec, wprec)
+            * perf_factor
         )
+
         ws_loop = b * oh * ow
         # Input Stationary energy
         # kw * kh * ic * oh * ow * b -> oc
@@ -262,13 +311,24 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     else:
         is_loop = ceil_a_by_b(oc, acc_obj.M) * acc_obj.M # input stationary 
+        
+        # old
+        # os_loop = (
+        #     ceil_a_by_b(ic, acc_obj.N * acc_obj.get_perf_factor(iprec, wprec))
+        #     * acc_obj.N
+        #     * acc_obj.get_perf_factor(iprec, wprec)
+        #     * kh
+        #     * kw
+        # ) # output stationary 
+
         os_loop = (
-            ceil_a_by_b(ic, acc_obj.N * acc_obj.get_perf_factor(iprec, wprec))
+            ceil_a_by_b(ic, acc_obj.N * perf_factor)
             * acc_obj.N
-            * acc_obj.get_perf_factor(iprec, wprec)
+            * perf_factor
             * kh
             * kw
         ) # output stationary 
+
         ws_loop = b * oh * ow # weight stationary 
         # Input Stationary energy
         # kw * kh * ic * oh * ow * b -> oc
@@ -284,12 +344,6 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
     
     # 和精度无关的类似定值
     num_tiles = num_b * num_ow * num_oh * num_ic * num_oc
-
-    # print('num_b',num_b)
-    # print('num_ow',num_ow)
-    # print('num_oh',num_oh)
-    # print('num_ic',num_ic)
-    # print('num_oc',num_oc)
 
 
     if is_energy == min_energy:
@@ -340,12 +394,17 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     # acc_obj 加速器仿真 accelerator.py
 
-    # print('num_tiles',num_tiles)
-    # sys.exit()
+
+    # compute_cycles = num_tiles * acc_obj.get_compute_cycles(
+    #     ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col,
+    # )
 
     compute_cycles = num_tiles * acc_obj.get_compute_cycles(
-        ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col
+        ic, oc, ow, oh, b, kw, kh, iprec, wprec,im2col,i_low,i_mid,i_high,w_low,w_mid,w_high,
     )
+
+
+
 
     # print('test:',ic, oc, ow, oh, b, kw, kh, iprec, wprec, im2col)
 
@@ -353,7 +412,8 @@ def get_stats_fast(conv_params, tiling, order_type, verbose=False):
 
     memory_stalls = max(0, memory_cycles_required - compute_cycles) + latency
 
-
+    # 四舍五入取整
+    # stats.total_cycles = round(compute_cycles) + round(memory_stalls)
     stats.total_cycles = compute_cycles + memory_stalls
     
     # 拿fc第一层的数据
@@ -384,7 +444,8 @@ def optimize_for_order(conv_params):
     # sys.exit()
 
     return_dict = {}
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+    # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
 
     # 偏函数 固定该函数的第一个参数为 conv_params
     _bound_optimizer_method = functools.partial(_optimize_for_order, conv_params)
@@ -459,7 +520,10 @@ def optimize_for_order(conv_params):
 
 
 def get_loop_instructions(conv_params, tiling, order_type):
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+
+    # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
+
     I = (O - 1) * S + K
 
     num_b, b = tiling["B/b"]
@@ -616,7 +680,7 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
     """
     """
         self.accelerator:这是一个对象的属性或变量,表示卷积操作所使用的加速器。
-        K:这是一个整数,表示卷积核的尺寸或大小。--错误
+        K:这是一个整数,表示卷积核的尺寸或大小。
         O:这是一个整数,表示输出特征图的尺寸或大小。
         S:这是一个整数,表示卷积的步幅或 stride。
         IC:这是一个整数,表示输入通道数或输入特征图的深度。
@@ -628,7 +692,8 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
         self.get_energy_cost()：这是一个方法调用,表示获取能量消耗的值。
     """
 
-    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+    # acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost = conv_params
+    acc_obj, K, O, S, IC, OC, B, iprec, wprec, im2col, energy_cost,i_low,i_mid,i_high,w_low,w_mid,w_high = conv_params
 
     I = (O - 1) * S + K
 
@@ -662,11 +727,13 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
             oh = ow
             
             num_ow = ceil_a_by_b(O, ow)
+
             num_oh = ceil_a_by_b(O, oh)
 
             for _ic in range(num_IC_tiles):
 
                 ic = min(1 << _ic, IC)
+                
                 num_ic = ceil_a_by_b(IC, ic)
 
                 for _oc in range(num_OC_tiles):
@@ -687,6 +754,7 @@ def _optimize_for_order(conv_params, order_type, verbose=False):
                     tiling["IC/ic"] = (num_ic, ic)
                     tiling["OC/oc"] = (num_oc, oc)
 
+                    # 迭代得出最优结果
                     stats = get_stats_fast(
                         conv_params, tiling, order_type, verbose=False
                     )
