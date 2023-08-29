@@ -292,53 +292,54 @@ class Accelerator(object):
                 # 自定义的概率分布
                 # prob = [0.1, 0.1, 0.2, 0.2, 0.05, 0.05, 0.1, 0.1, 0.1]
 
-                prob = [i_low * w_low, i_low * w_mid, i_low * w_high, i_mid * w_low, i_mid * w_mid, i_mid * w_high, i_high * w_low, i_high * w_mid, i_high * w_high]
-                prob_name = ["low_low","low_mid","low_high","mid_low","mid_mid","mid_high","high_low","high_mid","high_high"]
+                # prob = [i_low * w_low, i_low * w_mid, i_low * w_high, i_mid * w_low, i_mid * w_mid, i_mid * w_high, i_high * w_low, i_high * w_mid, i_high * w_high]
+                # prob_name = ["low_low","low_mid","low_high","mid_low","mid_mid","mid_high","high_low","high_mid","high_high"]
 
-                # 生成矩阵
-                fake_matrix = self.generate_fake_matrix_with_prob(ow, oh, b, kw, kh, ic, prob)
+                # # 生成矩阵
+                # fake_matrix = self.generate_fake_matrix_with_prob(ow, oh, b, kw, kh, ic, prob)
                 
-                # compute_sum = 0
-                max_compute_cycle = 0
+                # # compute_sum = 0
+                # max_compute_cycle = 0
 
                 
 
-                # 算出每一行需要的计算时间
-                for x in range(ni):
-                    sum_cycle = 0
-                    for y in range(batch):
-                        sum_cycle += 1.0 / self.get_perf_factor(conv_promote[prob_name[fake_matrix[x][y]]]['iprec']
-                                                                , conv_promote[prob_name[fake_matrix[x][y]]]['wprec'])
+                # # 算出每一行需要的计算时间
+                # for x in range(ni):
+                #     sum_cycle = 0
+                #     for y in range(batch):
+                #         sum_cycle += 1.0 / self.get_perf_factor(conv_promote[prob_name[fake_matrix[x][y]]]['iprec']
+                #                                                 , conv_promote[prob_name[fake_matrix[x][y]]]['wprec'])
                     
-                    # 取算的最慢的一行为标准
-                    if sum_cycle > max_compute_cycle:
-                        max_compute_cycle = sum_cycle
+                #     # 取算的最慢的一行为标准
+                #     if sum_cycle > max_compute_cycle:
+                #         max_compute_cycle = sum_cycle
                 
-                compute_cycles = round(ceil_a_by_b(no, self.M) * max_compute_cycle * ceil_a_by_b(ni, self.N))
+                # compute_cycles = round(ceil_a_by_b(no, self.M) * max_compute_cycle * ceil_a_by_b(ni, self.N))
 
 
                 
                 # 最慢计算阻塞 的情况 
-                # for x in range(batch):
+                compute_sum = 0
+                for x in range(batch):
 
-                #     # 赋值得到 -> 每一列对应9种计算块分别需要多少个
-                #     for y,name in zip(range(9),conv_set):
-                #         conv_set[name] = result_array[y][x]
+                    # 赋值得到 -> 每一列对应9种计算块分别需要多少个
+                    for y,name in zip(range(9),conv_set):
+                        conv_set[name] = result_array[y][x]
 
-                #     # 找FU的最小切分块: 以此为 cycle 消耗标准
-                #     # 例如该列的计算需求中有个[8,8]，那么就得按[8,8]来确定cycle
+                    # 找FU的最小切分块: 以此为 cycle 消耗标准
+                    # 例如该列的计算需求中有个[8,8]，那么就得按[8,8]来确定cycle
 
-                #     min_block = 16
+                    min_block = 16
 
-                #     for name in conv_set:
-                #         block_nums = self.get_perf_factor(conv_promote[name]['iprec'], conv_promote[name]['wprec'])
-                #         if( min_block > block_nums):
-                #             min_block = block_nums
+                    for name in conv_set:
+                        block_nums = self.get_perf_factor(conv_promote[name]['iprec'], conv_promote[name]['wprec'])
+                        if( min_block > block_nums):
+                            min_block = block_nums
                     
-                #     # 以这一列为对象
-                #     compute_sum += ( ceil_a_by_b(ni, self.N * min_block) + overhead ) * ceil_a_by_b(no, self.M)
+                    # 以这一列为对象
+                    compute_sum += ( ceil_a_by_b(ni, self.N * min_block) + overhead ) * ceil_a_by_b(no, self.M)
 
-                # compute_cycles = compute_sum
+                compute_cycles = compute_sum
 
 
 

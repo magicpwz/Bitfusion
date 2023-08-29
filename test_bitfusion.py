@@ -83,7 +83,7 @@ sim_sweep_columns = ['N', 'M',
 
 
 
-bf_e_sim_sweep_csv = os.path.join(results_dir, 'test_'
+bf_e_sim_sweep_csv = os.path.join(results_dir, 'test_v2base_'
                                   + str(config_ini.getint('system','if_width'))+
                                   '_sim_sweep.csv')
 
